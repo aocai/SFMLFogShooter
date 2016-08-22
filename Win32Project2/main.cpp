@@ -23,31 +23,73 @@ float magnitude(Vector2f v)
 //		 1 = right plane
 //		 2 = top plane
 //		 3 = bottom plane
-float boundClipTest(Vector2f P, Vector2f Q, int boundary)
+//return: plane number the intersection was detected in
+int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 {
-	Vector2f PQ = Q - P;
-	Vector2f normal = Vector2f(PQ.y * -1, PQ.x);
-	float num = dotProduct(P, normal);
+	Vector2f PQ = Q - position;
+	Vector2f normal = PQ.y == 0 ? Vector2f(PQ.y, PQ.x * -1) : Vector2f(PQ.y * -1, PQ.x);
+	float num = dotProduct(position, normal);
+
 	float result;
-	switch (boundary)
+	int successful = -1;
+
+	for (unsigned int boundary = 0; boundary < 4; ++boundary)
 	{
-	case 0:
-		result = num / normal.y;
-		break;
-	case 1:
-		result = (num - normal.x * 1280) / normal.y;
-		break;
-	case 2:
-		result = num / normal.x;
-		break;
-	case 3:
-		result = (num - normal.y * 720) / normal.x;
-		break;
-	default:
-		result = -1;
-		break;
+		switch (boundary)
+		{
+		case 0:
+			result = num / normal.y;
+			if (result >= 0 && result <= 720)
+			{
+				if (dotProduct(Q - position, Vector2f(0, result) - position) >= 0)
+				{
+					ret = Vector2f(0, result);
+					successful = 0;
+				}
+			}
+			break;
+		case 1:
+			result = (num - normal.x * 1280) / normal.y;
+			if (result >= 0 && result <= 720)
+			{
+				if (dotProduct(Q - position, Vector2f(1280, result) - position) >= 0)
+				{
+					ret = Vector2f(1280, result);
+					successful = 1;
+				}
+			}
+			break;
+		case 2:
+			result = num / normal.x;
+			if (result >= 0 && result <= 1280)
+			{
+				if (dotProduct(Q - position, Vector2f(result, 0) - position) >= 0)
+				{
+					ret = Vector2f(result, 0);
+					successful = 2;
+				}
+			}
+			break;
+		case 3:
+			result = (num - normal.y * 720) / normal.x;
+			if (result >= 0 && result <= 1280)
+			{
+				if (dotProduct(Q - position, Vector2f(result, 720) - position) >= 0)
+				{
+					ret = Vector2f(result, 720);
+					successful = 3;
+				}
+			}
+			break;
+		default:
+			successful = -1;
+			break;
+		}
+		if (successful != -1)
+			break;
 	}
-	return result;
+
+	return successful;
 }
 
 ConvexShape clipLOS(Vector2f position, Vector2f mousePosition, Vector2f leftArm, Vector2f rightArm)
@@ -57,112 +99,10 @@ ConvexShape clipLOS(Vector2f position, Vector2f mousePosition, Vector2f leftArm,
 	los.setPoint(0, position);
 
 	Vector2f result;
-	int successful = -1;
-	for (int m = 0; m < 4; ++m)
-	{
-		float test = boundClipTest(position, leftArm, m);
-		switch (m)
-		{
-		case 0:
-			if (test >= 0 && test <= 720)
-			{
-				if (dotProduct(leftArm - position, Vector2f(0, test) - position) >= 0)
-				{
-					result = Vector2f(0, test);
-					successful = 0;
-				}
-			}
-			break;
-		case 1:
-			if (test >= 0 && test <= 720)
-			{
-				if (dotProduct(leftArm - position, Vector2f(1280, test) - position) >= 0)
-				{
-					result = Vector2f(1280, test);
-					successful = 1;
-				}
-			}
-			break;
-		case 2:
-			if (test >= 0 && test <= 1280)
-			{
-				if (dotProduct(leftArm - position, Vector2f(test, 0) - position) >= 0)
-				{
-					result = Vector2f(test, 0);
-					successful = 2;
-				}
-			}
-			break;
-		case 3:
-			if (test >= 0 && test <= 1280)
-			{
-				if (dotProduct(leftArm - position, Vector2f(test, 720) - position) >= 0)
-				{
-					result = Vector2f(test, 720);
-					successful = 3;
-				}
-			}
-			break;
-		default:
-			break;
-		}
-		if (successful != -1)
-			break;
-	}
-
+	int successful = boundClipTest(position, leftArm, result);
+	
 	Vector2f result2;
-	int successful2 = -1;
-	for (int m = 0; m < 4; ++m)
-	{
-		float test = boundClipTest(position, rightArm, m);
-		switch (m)
-		{
-		case 0:
-			if (test >= 0 && test <= 720)
-			{
-				if (dotProduct(rightArm - position, Vector2f(0, test) - position) >= 0)
-				{
-					result2 = Vector2f(0, test);
-					successful2 = 0;
-				}
-			}
-			break;
-		case 1:
-			if (test >= 0 && test <= 720)
-			{
-				if (dotProduct(rightArm - position, Vector2f(1280, test) - position) >= 0)
-				{
-					result2 = Vector2f(1280, test);
-					successful2 = 1;
-				}
-			}
-			break;
-		case 2:
-			if (test >= 0 && test <= 1280)
-			{
-				if (dotProduct(rightArm - position, Vector2f(test, 0) - position) >= 0)
-				{
-					result2 = Vector2f(test, 0);
-					successful2 = 2;
-				}
-			}
-			break;
-		case 3:
-			if (test >= 0 && test <= 1280)
-			{
-				if (dotProduct(rightArm - position, Vector2f(test, 720) - position) >= 0)
-				{
-					result2 = Vector2f(test, 720);
-					successful2 = 3;
-				}
-			}
-			break;
-		default:
-			break;
-		}
-		if (successful2 != -1)
-			break;
-	}
+	int successful2 = boundClipTest(position, rightArm, result2);
 
 	if (successful != successful2)
 	{
@@ -310,7 +250,7 @@ ConvexShape clipLOS(Vector2f position, Vector2f mousePosition, Vector2f leftArm,
 	else
 	{
 		los.setPoint(1, result);
-		los.setPoint(2, result2);
+		los.setPoint(2, result2);	
 	}
 
 	los.setFillColor(Color::White);
@@ -360,121 +300,20 @@ ConvexShape clipShadow(RectangleShape wall, Vector2f position)
 				minPoint = j;
 		}
 	}
+
 	ConvexShape shape(4);
 	shape.setPoint(0, wall.getPosition() + wall.getPoint(maxPoint));
 	shape.setPoint(1, wall.getPosition() + wall.getPoint(minPoint));
 
 	Vector2f result;
-	int successful = -1;
-	for (int m = 0; m < 4; ++m)
-	{
-		Vector2f v1 = wall.getPosition() + wall.getPoint(minPoint);
-		Vector2f v2 = position + (v1 - position) * 100.0f;
-		float test = boundClipTest(v1, v2, m);
-		switch (m)
-		{
-		case 0:
-			if (test >= 0 && test <= 720)
-			{
-				if (dotProduct(v1 - position, Vector2f(0, test) - position) >= 0)
-				{
-					result = Vector2f(0, test);
-					successful = 0;
-				}
-			}
-			break;
-		case 1:
-			if (test >= 0 && test <= 720)
-			{
-				if (dotProduct(v1 - position, Vector2f(1280, test) - position) >= 0)
-				{
-					result = Vector2f(1280, test);
-					successful = 1;
-				}
-			}
-			break;
-		case 2:
-			if (test >= 0 && test <= 1280)
-			{
-				if (dotProduct(v1 - position, Vector2f(test, 0) - position) >= 0)
-				{
-					result = Vector2f(test, 0);
-					successful = 2;
-				}
-			}
-			break;
-		case 3:
-			if (test >= 0 && test <= 1280)
-			{
-				if (dotProduct(v1 - position, Vector2f(test, 720) - position) >= 0)
-				{
-					result = Vector2f(test, 720);
-					successful = 3;
-				}
-			}
-			break;
-		default:
-			break;
-		}
-		if (successful != -1)
-			break;
-	}
+	Vector2f u1 = position;
+	Vector2f u2 = position + (wall.getPosition() + wall.getPoint(minPoint) - position) * 100.0f;
+	int successful = boundClipTest(u1, u2, result);
 
 	Vector2f result2;
-	int successful2 = -1;
-	for (int m = 0; m < 4; ++m)
-	{
-		Vector2f v1 = wall.getPosition() + wall.getPoint(maxPoint);
-		Vector2f v2 = position + (v1 - position) * 100.0f;
-		float test = boundClipTest(v1, v2, m);
-		switch (m)
-		{
-		case 0:
-			if (test >= 0 && test <= 720)
-			{
-				if (dotProduct(v1 - position, Vector2f(0, test) - position) >= 0)
-				{
-					result2 = Vector2f(0, test);
-					successful2 = 0;
-				}
-			}
-			break;
-		case 1:
-			if (test >= 0 && test <= 720)
-			{
-				if (dotProduct(v1 - position, Vector2f(1280, test) - position) >= 0)
-				{
-					result2 = Vector2f(1280, test);
-					successful2 = 1;
-				}
-			}
-			break;
-		case 2:
-			if (test >= 0 && test <= 1280)
-			{
-				if (dotProduct(v1 - position, Vector2f(test, 0) - position) >= 0)
-				{
-					result2 = Vector2f(test, 0);
-					successful2 = 2;
-				}
-			}
-			break;
-		case 3:
-			if (test >= 0 && test <= 1280)
-			{
-				if (dotProduct(v1 - position, Vector2f(test, 720) - position) >= 0)
-				{
-					result2 = Vector2f(test, 720);
-					successful2 = 3;
-				}
-			}
-			break;
-		default:
-			break;
-		}
-		if (successful2 != -1)
-			break;
-	}
+	Vector2f v1 = position;
+	Vector2f v2 = position + (wall.getPosition() + wall.getPoint(maxPoint) - position) * 100.0f;
+	int successful2 = boundClipTest(v1, v2, result2);
 
 	if (successful != successful2)
 	{
@@ -691,7 +530,6 @@ int main()
 	playerHead.setPosition(Vector2f(playerBody.getPosition().x + 5, playerBody.getPosition().y - 5));
 	playerHead.setFillColor(Color::Black);
 
-
 	unsigned int currentWall = walls.size();
 	float deltaX;
 	float deltaY;
@@ -710,7 +548,9 @@ int main()
 			{
 				for (unsigned int i = 0; i < walls.size(); ++i)
 				{
-					if (walls[i].getGlobalBounds().contains(window.mapPixelToCoords(Mouse::getPosition(window)))) {
+					if (walls[i].getGlobalBounds().contains(window.mapPixelToCoords(Mouse::getPosition(window)))) 
+					{
+						//get wall thats clicked on
 						currentWall = i;
 
 						deltaX = window.mapPixelToCoords(Mouse::getPosition(window)).x - walls[currentWall].getPosition().x;
@@ -727,14 +567,26 @@ int main()
 			deltaY = 0;
 		}
 
+		//if wall is selected
 		if (currentWall < walls.size())
 		{
+			//move wall to new position
 			float posX = window.mapPixelToCoords(Mouse::getPosition(window)).x - deltaX;
 			float posY = window.mapPixelToCoords(Mouse::getPosition(window)).y - deltaY;
+
+			if (posX < 0)
+				posX = 0;
+			else if (posX + walls[currentWall].getSize().x > 1280)
+				posX = 1280 - walls[currentWall].getSize().x;
+			if (posY < 0)
+				posY = 0;
+			else if (posY + walls[currentWall].getSize().y > 720)
+				posY = 720 - walls[currentWall].getSize().y;
+
 			walls[currentWall].setPosition(Vector2f(posX, posY));
 		}
 
-		//TODO: Check for collision and prevent movement if collision detected
+		//Check for collision and prevent movement if collision detected
 		if (Keyboard::isKeyPressed(Keyboard::Left))
 		{
 			playerBody.move(Vector2f(-3.0f, 0));
@@ -822,7 +674,9 @@ int main()
 
 		//check fog
 		std::vector<ConvexShape> fog = checkFog(walls, Vector2f(playerHead.getPosition().x + 15, playerHead.getPosition().y + 15));
-		
+
+		//TODO : clip walls based on los
+
 		//draw background color
 		window.clear(Color(150, 150, 150, 255));
 
