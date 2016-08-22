@@ -18,11 +18,10 @@ float magnitude(Vector2f v)
 	return sqrt(v.x * v.x + v.y * v.y);
 }
 
-//param: boundary = 0-3
-//		 0 = left plane
-//		 1 = right plane
-//		 2 = top plane
-//		 3 = bottom plane
+//Description: Clip 2D ray against 4 bounding planes of the screen
+//param: position = player position
+//		 Q = player position + vector from player to point off screen
+//		 rect = returned result of intersection in the right direction
 //return: plane number the intersection was detected in
 int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 {
@@ -31,8 +30,13 @@ int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 	float num = dotProduct(position, normal);
 
 	float result;
-	int successful = -1;
+	int planeNum = -1;
 
+	//Clip against 4 bounds of screen
+	//0 = left plane
+	//1 = right plane
+	//2 = top plane
+	//3 = bottom plane
 	for (unsigned int boundary = 0; boundary < 4; ++boundary)
 	{
 		switch (boundary)
@@ -41,10 +45,11 @@ int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 			result = num / normal.y;
 			if (result >= 0 && result <= 720)
 			{
+				//if intersection and Q lies in the same direction with regards to position
 				if (dotProduct(Q - position, Vector2f(0, result) - position) >= 0)
 				{
 					ret = Vector2f(0, result);
-					successful = 0;
+					planeNum = 0;
 				}
 			}
 			break;
@@ -52,10 +57,11 @@ int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 			result = (num - normal.x * 1280) / normal.y;
 			if (result >= 0 && result <= 720)
 			{
+				//if intersection and Q lies in the same direction with regards to position
 				if (dotProduct(Q - position, Vector2f(1280, result) - position) >= 0)
 				{
 					ret = Vector2f(1280, result);
-					successful = 1;
+					planeNum = 1;
 				}
 			}
 			break;
@@ -63,10 +69,11 @@ int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 			result = num / normal.x;
 			if (result >= 0 && result <= 1280)
 			{
+				//if intersection and Q lies in the same direction with regards to position
 				if (dotProduct(Q - position, Vector2f(result, 0) - position) >= 0)
 				{
 					ret = Vector2f(result, 0);
-					successful = 2;
+					planeNum = 2;
 				}
 			}
 			break;
@@ -74,24 +81,31 @@ int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 			result = (num - normal.y * 720) / normal.x;
 			if (result >= 0 && result <= 1280)
 			{
+				//if intersection and Q lies in the same direction with regards to position
 				if (dotProduct(Q - position, Vector2f(result, 720) - position) >= 0)
 				{
 					ret = Vector2f(result, 720);
-					successful = 3;
+					planeNum = 3;
 				}
 			}
 			break;
 		default:
-			successful = -1;
+			planeNum = -1;
 			break;
 		}
-		if (successful != -1)
+		if (planeNum != -1)
 			break;
 	}
 
-	return successful;
+	return planeNum;
 }
 
+//Description: Clip the two vectors of the player's line of sight (left and right) against the 4 bounding planes of the screen
+//Params:	position = player position
+//			mousePosition = mouse position on screen
+//			leftArm = left LOS vector
+//			rightArm = right LOS vector
+//return:	vector of ConvexShape that covers the area not in player's LOS
 std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vector2f leftArm, Vector2f rightArm)
 {
 	std::vector<ConvexShape> losVect;
@@ -100,14 +114,15 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 	los.setPoint(0, position);
 
 	Vector2f result;
-	int successful = boundClipTest(position, leftArm, result);
+	int plane1 = boundClipTest(position, leftArm, result);
 
 	Vector2f result2;
-	int successful2 = boundClipTest(position, rightArm, result2);
+	int plane2 = boundClipTest(position, rightArm, result2);
 
-	if (successful == 0)
+	//clip according to which plane was intersected
+	if (plane1 == 0)
 	{
-		if (successful2 == 0)
+		if (plane2 == 0)
 		{
 			los.setPoint(1, Vector2f(position.x, 0));
 			los.setPoint(2, Vector2f(0, 0));
@@ -131,7 +146,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 1)
+		else if (plane2 == 1)
 		{
 			if (position.y > mousePosition.y)
 			{
@@ -166,7 +181,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 				losVect.push_back(los2);
 			}
 		}
-		else if (successful2 == 2)
+		else if (plane2 == 2)
 		{
 			los.setPoint(1, result);
 			los.setPoint(2, Vector2f(0, 720));
@@ -190,7 +205,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 3)
+		else if (plane2 == 3)
 		{
 			los.setPoint(1, result);
 			los.setPoint(2, Vector2f(0, 0));
@@ -215,9 +230,9 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			losVect.push_back(los3);
 		}
 	}
-	else if (successful == 1)
+	else if (plane1 == 1)
 	{
-		if (successful2 == 0)
+		if (plane2 == 0)
 		{
 			if (position.y > mousePosition.y)
 			{
@@ -252,7 +267,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 				losVect.push_back(los2);
 			}
 		}
-		else if (successful2 == 1)
+		else if (plane2 == 1)
 		{
 			los.setPoint(1, Vector2f(position.x, 0));
 			los.setPoint(2, Vector2f(1280, 0));
@@ -276,7 +291,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 2)
+		else if (plane2 == 2)
 		{
 			los.setPoint(1, result);
 			los.setPoint(2, Vector2f(1280, 720));
@@ -300,7 +315,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 3)
+		else if (plane2 == 3)
 		{
 			los.setPoint(1, result);
 			los.setPoint(2, Vector2f(1280, 0));
@@ -325,9 +340,9 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			losVect.push_back(los3);
 		}
 	}
-	else if (successful == 2)
+	else if (plane1 == 2)
 	{
-		if (successful2 == 0)
+		if (plane2 == 0)
 		{
 			los.setPoint(1, result);
 			los.setPoint(2, Vector2f(1280, 0));
@@ -351,7 +366,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 1)
+		else if (plane2 == 1)
 		{
 			los.setPoint(1, result);
 			los.setPoint(2, Vector2f(0, 0));
@@ -375,7 +390,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 2)
+		else if (plane2 == 2)
 		{
 			los.setPoint(1, Vector2f(0, position.y));
 			los.setPoint(2, Vector2f(0, 0));
@@ -399,7 +414,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 3)
+		else if (plane2 == 3)
 		{
 			if (position.x > mousePosition.x)
 			{
@@ -435,9 +450,9 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			}
 		}
 	}
-	else if (successful == 3)
+	else if (plane1 == 3)
 	{
-		if (successful2 == 0)
+		if (plane2 == 0)
 		{
 			los.setPoint(1, result);
 			los.setPoint(2, Vector2f(1280, 720));
@@ -461,7 +476,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 1)
+		else if (plane2 == 1)
 		{
 			los.setPoint(1, result);
 			los.setPoint(2, Vector2f(0, 720));
@@ -485,7 +500,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 			los3.setFillColor(fogColor);
 			losVect.push_back(los3);
 		}
-		else if (successful2 == 2)
+		else if (plane2 == 2)
 		{
 			if (position.x > mousePosition.x)
 			{
@@ -520,7 +535,7 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 				losVect.push_back(los2);
 			}
 		}
-		else if (successful2 == 3)
+		else if (plane2 == 3)
 		{
 			los.setPoint(1, Vector2f(0, position.y));
 			los.setPoint(2, Vector2f(0, 720));
@@ -546,19 +561,28 @@ std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vect
 		}
 	}
 
-
 	return losVect;
 }
 
+//Description: Create wall shadow and clip against the 4 bounding planes of the screen
+//Params:	wall = the current RectangleShape
+//			position = player position
+//return:	ConvexShape of the wall's shadow, clipped against the 4 bounding planes of the screen
 ConvexShape clipShadow(RectangleShape wall, Vector2f position)
 {
 	int maxPoint = 0;
 	int minPoint = 0;
+
+	//for each point in RectangleShape
 	for (unsigned int j = 0; j < 4; ++j)
 	{
 		int result = -1;
+
+		//for each other point in RectangleShape, check the determinant of vectors from position to the two points.
+		//if for a point, they are all greater than 0, then it is the maxPoint. If for a point, they are all lesser than 0, then it is the minPoint
 		for (unsigned int k = 0; k < 4; ++k)
 		{
+			//do not process the same point twice
 			if (k == j)
 			{
 				++k;
@@ -594,10 +618,12 @@ ConvexShape clipShadow(RectangleShape wall, Vector2f position)
 		}
 	}
 
+	//the maxPoint and minPoint are two points of the shadow ConvexShape
 	ConvexShape shape(4);
 	shape.setPoint(0, wall.getPosition() + wall.getPoint(maxPoint));
 	shape.setPoint(1, wall.getPosition() + wall.getPoint(minPoint));
 
+	//get the other points by projecting onto the boundaries of the screen, and clip against the 4 bounds
 	Vector2f result;
 	Vector2f u1 = position;
 	Vector2f u2 = position + (wall.getPosition() + wall.getPoint(minPoint) - position) * 100.0f;
@@ -762,9 +788,11 @@ ConvexShape clipShadow(RectangleShape wall, Vector2f position)
 }
 
 //clip fog/shadow by testing for intersection with left and right arms of LOS. Then clip against the boundaries of the view screen
-std::vector<ConvexShape> checkFog(std::vector<RectangleShape> walls, Vector2f position)
+std::vector<ConvexShape> checkShadow(std::vector<RectangleShape> walls, Vector2f position)
 {
 	std::vector<ConvexShape> fog;
+
+	//for each wall, create the shadow according to player position
 	for (unsigned int i = 0; i < walls.size(); ++i)
 	{
 		ConvexShape shape = clipShadow(walls[i], position);
@@ -785,6 +813,7 @@ int main()
 
 	std::vector<RectangleShape> walls;
 
+	//create the walls
 	RectangleShape rect1;
 	rect1.setSize(Vector2f(80,220));
 	rect1.setPosition(Vector2f(120,110));
@@ -815,6 +844,7 @@ int main()
 	rect5.setFillColor(Color::Black);
 	walls.push_back(rect5);
 
+	//creater player shape
 	RectangleShape playerBody;
 	playerBody.setSize(Vector2f(46,20));
 	playerBody.setOrigin(Vector2f(23, 10));
@@ -840,6 +870,7 @@ int main()
 				window.close();
 		}
 
+		//allow walls to be moved around by dragging with MLB
 		if (Mouse::isButtonPressed(Mouse::Left))
 		{
 			if (currentWall == walls.size())
@@ -865,10 +896,10 @@ int main()
 			deltaY = 0;
 		}
 
-		//if wall is selected
+		//if wall is selected by MLB
 		if (currentWall < walls.size())
 		{
-			//move wall to new position
+			//move wall to new mouse position
 			float posX = window.mapPixelToCoords(Mouse::getPosition(window)).x - deltaX;
 			float posY = window.mapPixelToCoords(Mouse::getPosition(window)).y - deltaY;
 
@@ -885,6 +916,7 @@ int main()
 		}
 
 		//Check for collision and prevent movement if collision detected
+		//do for all directional keys
 		if (Keyboard::isKeyPressed(Keyboard::Left))
 		{
 			playerBody.move(Vector2f(-3.0f, 0));
@@ -980,12 +1012,14 @@ int main()
 			}
 		}
 
+		//current mouse coordinates
 		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
 
-		//get camera los arms
+		//current player position
 		Vector2f playerPosition = Vector2f(playerHead.getPosition().x, playerHead.getPosition().y);
 		Vector2f PQ;
 
+		//get vector from player position to mouse position
 		if (playerPosition == mouseCoord)
 		{
 			PQ = playerPosition - lastMousePosition;
@@ -995,7 +1029,8 @@ int main()
 			PQ = playerPosition - mouseCoord;
 			if (magnitude(PQ) < 30)
 			{
-				//project onto surface of circle
+				//mouse position too close to player position.
+				//project mouse position onto surface of circle
 				float angle = asinf((mouseCoord.y - playerPosition.y) / magnitude(PQ));
 				Vector2f V = Vector2f(30 * cosf(angle), 30 * sinf(angle));
 				lastMousePosition = Vector2f(playerPosition.x <= mouseCoord.x ? playerPosition.x + V.x : playerPosition.x - V.x, playerPosition.y + V.y);
@@ -1006,25 +1041,27 @@ int main()
 				lastMousePosition = mouseCoord;
 			}
 		}
+
+		//get the left and right vectors of the player view area (left and right LOS arms) by rotating vector PQ by 15 degrees
 		Vector2f rightArm = Vector2f(PQ.x * cos(15) + PQ.y * (-sin(15)), PQ.x * sin(15) + PQ.y * cos(15)) * 100.0f;
 		Vector2f leftArm = Vector2f(PQ.x * cos(-15) + PQ.y * (-sin(-15)), PQ.x * sin(-15) + PQ.y * cos(-15)) * 100.0f;
 
-		//get los
+		//get los ConvexShapes
 		std::vector<ConvexShape> los = clipLOS(playerPosition, mouseCoord, leftArm, rightArm);
 
-		//check fog
-		std::vector<ConvexShape> fog = checkFog(walls, playerPosition);
+		//check shadow ConvexShapes
+		std::vector<ConvexShape> shadow = checkShadow(walls, playerPosition);
 
 		//draw background color
 		window.clear(Color::White);
 
-		//draw fog and wall
-		for (unsigned int i = 0; i < fog.size(); ++i)
+		//draw shadow first
+		for (unsigned int i = 0; i < shadow.size(); ++i)
 		{
-				window.draw(fog[i]);
+				window.draw(shadow[i]);
 		}
 
-		//draw los
+		//draw player view area by drawing the opposite
 		for (unsigned int i = 0; i < los.size(); ++i)
 		{
 			window.draw(los[i]);
@@ -1039,6 +1076,7 @@ int main()
 		//draw player
 		window.draw(playerBody);
 		window.draw(playerHead);
+
 		window.display();
 	}
 	return 0;
