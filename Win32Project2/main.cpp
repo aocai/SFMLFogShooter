@@ -92,169 +92,462 @@ int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 	return successful;
 }
 
-ConvexShape clipLOS(Vector2f position, Vector2f mousePosition, Vector2f leftArm, Vector2f rightArm)
+std::vector<ConvexShape> clipLOS(Vector2f position, Vector2f mousePosition, Vector2f leftArm, Vector2f rightArm)
 {
-	ConvexShape los;
-	los.setPointCount(3);
+	std::vector<ConvexShape> losVect;
+	Color fogColor = Color(80, 80, 80, 255);
+	ConvexShape los(4);
 	los.setPoint(0, position);
 
 	Vector2f result;
 	int successful = boundClipTest(position, leftArm, result);
-	
+
 	Vector2f result2;
 	int successful2 = boundClipTest(position, rightArm, result2);
 
-	if (successful != successful2)
+	if (successful == 0)
 	{
-		if (successful == 0)
+		if (successful2 == 0)
 		{
-			if (successful2 == 2)
+			los.setPoint(1, Vector2f(position.x, 0));
+			los.setPoint(2, Vector2f(0, 0));
+			los.setPoint(3, result.y > result2.y ? result2 : result);
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(position.x, 720));
+			los2.setPoint(2, Vector2f(0, 720));
+			los2.setPoint(3, result.y > result2.y ? result : result2);
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, Vector2f(position.x, 0));
+			los3.setPoint(1, Vector2f(1280, 0));
+			los3.setPoint(2, Vector2f(1280, 720));
+			los3.setPoint(3, Vector2f(position.x, 720));
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 1)
+		{
+			if (position.y > mousePosition.y)
 			{
-				los.setPointCount(4);
-				los.setPoint(1, result);
-				los.setPoint(2, Vector2f(0, 0));
-				los.setPoint(3, result2);
-			}
-			else if (successful2 == 3)
-			{
-				los.setPointCount(4);
 				los.setPoint(1, result);
 				los.setPoint(2, Vector2f(0, 720));
-				los.setPoint(3, result2);
+				los.setPoint(3, Vector2f(position.x, 720));
+				los.setFillColor(fogColor);
+				losVect.push_back(los);
+
+				ConvexShape los2(4);
+				los2.setPoint(0, position);
+				los2.setPoint(1, result2);
+				los2.setPoint(2, Vector2f(1280, 720));
+				los2.setPoint(3, Vector2f(position.x, 720));
+				los2.setFillColor(fogColor);
+				losVect.push_back(los2);
 			}
-			else if (successful2 == 1)
+			else
 			{
-				los.setPointCount(5);
-				if (position.y > mousePosition.y)
-				{
-					los.setPoint(1, result);
-					los.setPoint(2, Vector2f(0, 0));
-					los.setPoint(3, Vector2f(1280, 0));
-					los.setPoint(4, result2);
-				}
-				else
-				{
-					los.setPoint(1, result);
-					los.setPoint(2, Vector2f(0, 720));
-					los.setPoint(3, Vector2f(1280, 720));
-					los.setPoint(4, result2);
-				}
-			}
-		}
-		else if (successful == 1)
-		{
-			if (successful2 == 2)
-			{
-				los.setPointCount(4);
-				los.setPoint(1, result);
-				los.setPoint(2, Vector2f(1280, 0));
-				los.setPoint(3, result2);
-			}
-			else if (successful2 == 3)
-			{
-				los.setPointCount(4);
-				los.setPoint(1, result);
-				los.setPoint(2, Vector2f(1280, 720));
-				los.setPoint(3, result2);
-			}
-			else if (successful2 == 0)
-			{
-				los.setPointCount(5);
-				if (position.y > mousePosition.y)
-				{
-					los.setPoint(1, result);
-					los.setPoint(2, Vector2f(1280, 0));
-					los.setPoint(3, Vector2f(0, 0));
-					los.setPoint(4, result2);
-				}
-				else
-				{
-					los.setPoint(1, result);
-					los.setPoint(2, Vector2f(1280, 720));
-					los.setPoint(3, Vector2f(0, 720));
-					los.setPoint(4, result2);
-				}
-			}
-		}
-		else if (successful == 2)
-		{
-			if (successful2 == 0)
-			{
-				los.setPointCount(4);
 				los.setPoint(1, result);
 				los.setPoint(2, Vector2f(0, 0));
-				los.setPoint(3, result2);
-			}
-			else if (successful2 == 1)
-			{
-				los.setPointCount(4);
-				los.setPoint(1, result);
-				los.setPoint(2, Vector2f(1280, 0));
-				los.setPoint(3, result2);
-			}
-			else if (successful2 == 3)
-			{
-				los.setPointCount(5);
-				if (position.x > mousePosition.x)
-				{
-					los.setPoint(1, result);
-					los.setPoint(2, Vector2f(0, 0));
-					los.setPoint(3, Vector2f(0, 720));
-					los.setPoint(4, result2);
-				}
-				else
-				{
-					los.setPoint(1, result);
-					los.setPoint(2, Vector2f(1280, 0));
-					los.setPoint(3, Vector2f(1280, 720));
-					los.setPoint(4, result2);
-				}
+				los.setPoint(3, Vector2f(position.x, 0));
+				los.setFillColor(fogColor);
+				losVect.push_back(los);
+
+				ConvexShape los2(4);
+				los2.setPoint(0, position);
+				los2.setPoint(1, result2);
+				los2.setPoint(2, Vector2f(1280, 0));
+				los2.setPoint(3, Vector2f(position.x, 0));
+				los2.setFillColor(fogColor);
+				losVect.push_back(los2);
 			}
 		}
-		else if (successful == 3)
+		else if (successful2 == 2)
 		{
-			if (successful2 == 0)
+			los.setPoint(1, result);
+			los.setPoint(2, Vector2f(0, 720));
+			los.setPoint(3, Vector2f(position.x, 720));
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(position.x, 720));
+			los2.setPoint(2, Vector2f(1280, 720));
+			los2.setPoint(3, Vector2f(1280, position.y));
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, position);
+			los3.setPoint(1, Vector2f(1280, position.y));
+			los3.setPoint(2, Vector2f(1280, 0));
+			los3.setPoint(3, result2);
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 3)
+		{
+			los.setPoint(1, result);
+			los.setPoint(2, Vector2f(0, 0));
+			los.setPoint(3, Vector2f(position.x, 0));
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(position.x, 0));
+			los2.setPoint(2, Vector2f(1280, 0));
+			los2.setPoint(3, Vector2f(1280, position.y));
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, position);
+			los3.setPoint(1, result2);
+			los3.setPoint(2, Vector2f(1280, 720));
+			los3.setPoint(3, Vector2f(1280, position.y));
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+	}
+	else if (successful == 1)
+	{
+		if (successful2 == 0)
+		{
+			if (position.y > mousePosition.y)
 			{
-				los.setPointCount(4);
-				los.setPoint(1, result);
-				los.setPoint(2, Vector2f(0, 720));
-				los.setPoint(3, result2);
-			}
-			else if (successful2 == 1)
-			{
-				los.setPointCount(4);
 				los.setPoint(1, result);
 				los.setPoint(2, Vector2f(1280, 720));
-				los.setPoint(3, result2);
+				los.setPoint(3, Vector2f(position.x, 720));
+				los.setFillColor(fogColor);
+				losVect.push_back(los);
+
+				ConvexShape los2(4);
+				los2.setPoint(0, position);
+				los2.setPoint(1, result2);
+				los2.setPoint(2, Vector2f(0, 720));
+				los2.setPoint(3, Vector2f(position.x, 720));
+				los2.setFillColor(fogColor);
+				losVect.push_back(los2);
 			}
-			else if (successful2 == 2)
+			else
 			{
-				los.setPointCount(5);
-				if (position.x > mousePosition.x)
-				{
-					los.setPoint(1, result);
-					los.setPoint(2, Vector2f(0, 720));
-					los.setPoint(3, Vector2f(0, 0));
-					los.setPoint(4, result2);
-				}
-				else
-				{
-					los.setPoint(1, result);
-					los.setPoint(2, Vector2f(1280, 720));
-					los.setPoint(3, Vector2f(1280, 0));
-					los.setPoint(4, result2);
-				}
+				los.setPoint(1, result);
+				los.setPoint(2, Vector2f(1280, 0));
+				los.setPoint(3, Vector2f(position.x, 0));
+				los.setFillColor(fogColor);
+				losVect.push_back(los);
+
+				ConvexShape los2(4);
+				los2.setPoint(0, position);
+				los2.setPoint(1, result2);
+				los2.setPoint(2, Vector2f(0, 0));
+				los2.setPoint(3, Vector2f(position.x, 0));
+				los2.setFillColor(fogColor);
+				losVect.push_back(los2);
+			}
+		}
+		else if (successful2 == 1)
+		{
+			los.setPoint(1, Vector2f(position.x, 0));
+			los.setPoint(2, Vector2f(1280, 0));
+			los.setPoint(3, result.y > result2.y ? result2 : result);
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(position.x, 720));
+			los2.setPoint(2, Vector2f(1280, 720));
+			los2.setPoint(3, result.y > result2.y ? result : result2);
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, Vector2f(position.x, 0));
+			los3.setPoint(1, Vector2f(0, 0));
+			los3.setPoint(2, Vector2f(0, 720));
+			los3.setPoint(3, Vector2f(position.x, 720));
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 2)
+		{
+			los.setPoint(1, result);
+			los.setPoint(2, Vector2f(1280, 720));
+			los.setPoint(3, Vector2f(position.x, 720));
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(position.x, 720));
+			los2.setPoint(2, Vector2f(0, 720));
+			los2.setPoint(3, Vector2f(0, position.y));
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, position);
+			los3.setPoint(1, Vector2f(0, position.y));
+			los3.setPoint(2, Vector2f(0, 0));
+			los3.setPoint(3, result2);
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 3)
+		{
+			los.setPoint(1, result);
+			los.setPoint(2, Vector2f(1280, 0));
+			los.setPoint(3, Vector2f(position.x, 0));
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(position.x, 0));
+			los2.setPoint(2, Vector2f(0, 0));
+			los2.setPoint(3, Vector2f(0, position.y));
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, position);
+			los3.setPoint(1, Vector2f(0, position.y));
+			los3.setPoint(2, Vector2f(0, 720));
+			los3.setPoint(3, result2);
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+	}
+	else if (successful == 2)
+	{
+		if (successful2 == 0)
+		{
+			los.setPoint(1, result);
+			los.setPoint(2, Vector2f(1280, 0));
+			los.setPoint(3, Vector2f(1280, position.y));
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(1280, position.y));
+			los2.setPoint(2, Vector2f(1280, 720));
+			los2.setPoint(3, Vector2f(position.x, 720));
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, position);
+			los3.setPoint(1, Vector2f(position.x, 720));
+			los3.setPoint(2, Vector2f(0, 720));
+			los3.setPoint(3, result2);
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 1)
+		{
+			los.setPoint(1, result);
+			los.setPoint(2, Vector2f(0, 0));
+			los.setPoint(3, Vector2f(0, position.y));
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(0, position.y));
+			los2.setPoint(2, Vector2f(0, 720));
+			los2.setPoint(3, Vector2f(position.x, 720));
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, position);
+			los3.setPoint(1, Vector2f(position.x, 720));
+			los3.setPoint(2, Vector2f(1280, 720));
+			los3.setPoint(3, result2);
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 2)
+		{
+			los.setPoint(1, Vector2f(0, position.y));
+			los.setPoint(2, Vector2f(0, 0));
+			los.setPoint(3, result.x > result2.x ? result2 : result);
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(1280, position.y));
+			los2.setPoint(2, Vector2f(1280, 0));
+			los2.setPoint(3, result.x > result2.x ? result : result2);
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, Vector2f(0, position.y));
+			los3.setPoint(1, Vector2f(0, 720));
+			los3.setPoint(2, Vector2f(1280, 720));
+			los3.setPoint(3, Vector2f(1280, position.y));
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 3)
+		{
+			if (position.x > mousePosition.x)
+			{
+				los.setPoint(1, result);
+				los.setPoint(2, Vector2f(1280, 0));
+				los.setPoint(3, Vector2f(1280, position.y));
+				los.setFillColor(fogColor);
+				losVect.push_back(los);
+
+				ConvexShape los2(4);
+				los2.setPoint(0, position);
+				los2.setPoint(1, Vector2f(1280, position.y));
+				los2.setPoint(2, Vector2f(1280, 720));
+				los2.setPoint(3, result2);
+				los2.setFillColor(fogColor);
+				losVect.push_back(los2);
+			}
+			else
+			{
+				los.setPoint(1, result);
+				los.setPoint(2, Vector2f(0, 0));
+				los.setPoint(3, Vector2f(0, position.y));
+				los.setFillColor(fogColor);
+				losVect.push_back(los);
+
+				ConvexShape los2(4);
+				los2.setPoint(0, position);
+				los2.setPoint(1, Vector2f(0, position.y));
+				los2.setPoint(2, Vector2f(0, 720));
+				los2.setPoint(3, result2);
+				los2.setFillColor(fogColor);
+				losVect.push_back(los2);
 			}
 		}
 	}
-	else
+	else if (successful == 3)
 	{
-		los.setPoint(1, result);
-		los.setPoint(2, result2);	
+		if (successful2 == 0)
+		{
+			los.setPoint(1, result);
+			los.setPoint(2, Vector2f(1280, 720));
+			los.setPoint(3, Vector2f(1280, position.y));			
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(1280, position.y));
+			los2.setPoint(2, Vector2f(1280, 0));
+			los2.setPoint(3, Vector2f(position.x, 0));
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, position);
+			los3.setPoint(1, Vector2f(position.x, 0));
+			los3.setPoint(2, Vector2f(0, 0));
+			los3.setPoint(3, result2);
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 1)
+		{
+			los.setPoint(1, result);
+			los.setPoint(2, Vector2f(0, 720));
+			los.setPoint(3, Vector2f(0, position.y));
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(0, position.y));
+			los2.setPoint(2, Vector2f(0, 0));
+			los2.setPoint(3, Vector2f(position.x, 0));
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, position);
+			los3.setPoint(1, Vector2f(position.x, 0));
+			los3.setPoint(2, Vector2f(1280, 0));
+			los3.setPoint(3, result2);
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
+		else if (successful2 == 2)
+		{
+			if (position.x > mousePosition.x)
+			{
+				los.setPoint(1, result);
+				los.setPoint(2, Vector2f(1280, 720));
+				los.setPoint(3, Vector2f(1280, position.y));
+				los.setFillColor(fogColor);
+				losVect.push_back(los);
+
+				ConvexShape los2(4);
+				los2.setPoint(0, position);
+				los2.setPoint(1, Vector2f(1280, position.y));
+				los2.setPoint(2, Vector2f(1280, 0));
+				los2.setPoint(3, result2);
+				los2.setFillColor(fogColor);
+				losVect.push_back(los2);
+			}
+			else
+			{
+				los.setPoint(1, result);
+				los.setPoint(2, Vector2f(0, 720));
+				los.setPoint(3, Vector2f(0, position.y));
+				los.setFillColor(fogColor);
+				losVect.push_back(los);
+
+				ConvexShape los2(4);
+				los2.setPoint(0, position);
+				los2.setPoint(1, Vector2f(0, position.y));
+				los2.setPoint(2, Vector2f(0, 0));
+				los2.setPoint(3, result2);
+				los2.setFillColor(fogColor);
+				losVect.push_back(los2);
+			}
+		}
+		else if (successful2 == 3)
+		{
+			los.setPoint(1, Vector2f(0, position.y));
+			los.setPoint(2, Vector2f(0, 720));
+			los.setPoint(3, result.x > result2.x ? result2 : result);
+			los.setFillColor(fogColor);
+			losVect.push_back(los);
+
+			ConvexShape los2(4);
+			los2.setPoint(0, position);
+			los2.setPoint(1, Vector2f(1280, position.y));
+			los2.setPoint(2, Vector2f(1280, 720));
+			los2.setPoint(3, result.x > result2.x ? result : result2);
+			los2.setFillColor(fogColor);
+			losVect.push_back(los2);
+
+			ConvexShape los3(4);
+			los3.setPoint(0, Vector2f(0, 0));
+			los3.setPoint(1, Vector2f(0, position.y));
+			los3.setPoint(2, Vector2f(1280, position.y));
+			los3.setPoint(3, Vector2f(1280, 0));
+			los3.setFillColor(fogColor);
+			losVect.push_back(los3);
+		}
 	}
 
-	los.setFillColor(Color::White);
-	return los;
+
+	return losVect;
 }
 
 ConvexShape clipShadow(RectangleShape wall, Vector2f position)
@@ -464,10 +757,11 @@ ConvexShape clipShadow(RectangleShape wall, Vector2f position)
 		shape.setPoint(3, result2);
 	}
 
-	shape.setFillColor(Color::Black);
+	shape.setFillColor(Color(150, 150, 150, 255));
 	return shape;
 }
 
+//clip fog/shadow by testing for intersection with left and right arms of LOS. Then clip against the boundaries of the view screen
 std::vector<ConvexShape> checkFog(std::vector<RectangleShape> walls, Vector2f position)
 {
 	std::vector<ConvexShape> fog;
@@ -492,43 +786,47 @@ int main()
 	std::vector<RectangleShape> walls;
 
 	RectangleShape rect1;
-	rect1.setSize(Vector2f(40,120));
+	rect1.setSize(Vector2f(80,220));
 	rect1.setPosition(Vector2f(120,110));
 	rect1.setFillColor(Color::Black);
 	walls.push_back(rect1);
 
 	RectangleShape rect2;
-	rect2.setSize(Vector2f(40, 160));
+	rect2.setSize(Vector2f(80, 300));
 	rect2.setPosition(Vector2f(520, 250));
 	rect2.setFillColor(Color::Black);
 	walls.push_back(rect2);
 
 	RectangleShape rect3;
-	rect3.setSize(Vector2f(30, 80));
+	rect3.setSize(Vector2f(60, 160));
 	rect3.setPosition(Vector2f(300, 50));
 	rect3.setFillColor(Color::Black);
 	walls.push_back(rect3);
 
 	RectangleShape rect4;
-	rect4.setSize(Vector2f(130, 55));
+	rect4.setSize(Vector2f(250, 110));
 	rect4.setPosition(Vector2f(750, 600));
 	rect4.setFillColor(Color::Black);
 	walls.push_back(rect4);
 
 	RectangleShape rect5;
-	rect5.setSize(Vector2f(160, 40));
-	rect5.setPosition(Vector2f(910, 680));
+	rect5.setSize(Vector2f(220, 90));
+	rect5.setPosition(Vector2f(1000, 320));
 	rect5.setFillColor(Color::Black);
 	walls.push_back(rect5);
 
 	RectangleShape playerBody;
-	playerBody.setSize(Vector2f(40,20));
-	playerBody.setPosition(Vector2f(windowWidth / 2 - 20, windowHeight / 2 - 10));
+	playerBody.setSize(Vector2f(46,20));
+	playerBody.setOrigin(Vector2f(23, 10));
+	playerBody.setPosition(Vector2f(windowWidth / 2, windowHeight / 2));
 	playerBody.setFillColor(Color::Black);
 
 	CircleShape playerHead(15);
-	playerHead.setPosition(Vector2f(playerBody.getPosition().x + 5, playerBody.getPosition().y - 5));
+	playerHead.setOrigin(Vector2f(15, 15));
+	playerHead.setPosition(Vector2f(playerBody.getPosition().x, playerBody.getPosition().y));
 	playerHead.setFillColor(Color::Black);
+
+	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
 	unsigned int currentWall = walls.size();
 	float deltaX;
@@ -548,7 +846,7 @@ int main()
 			{
 				for (unsigned int i = 0; i < walls.size(); ++i)
 				{
-					if (walls[i].getGlobalBounds().contains(window.mapPixelToCoords(Mouse::getPosition(window)))) 
+					if (walls[i].getGlobalBounds().contains(window.mapPixelToCoords(Mouse::getPosition(window))))
 					{
 						//get wall thats clicked on
 						currentWall = i;
@@ -605,6 +903,11 @@ int main()
 				playerBody.move(Vector2f(-playerHead.getPosition().x, 0));
 				playerHead.move(Vector2f(-playerHead.getPosition().x, 0));
 			}
+			if (playerBody.getRotation() != 90)
+			{
+				playerBody.rotate(-playerBody.getRotation());
+				playerBody.rotate(90);
+			}
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Right))
 		{
@@ -623,6 +926,11 @@ int main()
 			{
 				playerBody.move(Vector2f(1280 - 2 * playerHead.getRadius() - playerHead.getPosition().x, 0));
 				playerHead.move(Vector2f(1280 - 2 * playerHead.getRadius() - playerHead.getPosition().x, 0));
+			}
+			if (playerBody.getRotation() != 90)
+			{
+				playerBody.rotate(-playerBody.getRotation());
+				playerBody.rotate(90);
 			}
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Up))
@@ -643,6 +951,10 @@ int main()
 				playerBody.move(Vector2f(0, -playerHead.getPosition().y));
 				playerHead.move(Vector2f(0, -playerHead.getPosition().y));
 			}
+			if (playerBody.getRotation() != 0)
+			{
+				playerBody.rotate(-playerBody.getRotation());
+			}
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Down))
 		{
@@ -662,35 +974,66 @@ int main()
 				playerBody.move(Vector2f(0, 720 - 2 * playerHead.getRadius() - playerHead.getPosition().y));
 				playerHead.move(Vector2f(0, 720 - 2 * playerHead.getRadius() - playerHead.getPosition().y));
 			}
+			if (playerBody.getRotation() != 0)
+			{
+				playerBody.rotate(-playerBody.getRotation());
+			}
 		}
 
+		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
+
 		//get camera los arms
-		Vector2f PQ = playerHead.getPosition() - window.mapPixelToCoords(Mouse::getPosition(window));
+		Vector2f playerPosition = Vector2f(playerHead.getPosition().x, playerHead.getPosition().y);
+		Vector2f PQ;
+
+		if (playerPosition == mouseCoord)
+		{
+			PQ = playerPosition - lastMousePosition;
+		}
+		else
+		{
+			PQ = playerPosition - mouseCoord;
+			if (magnitude(PQ) < 30)
+			{
+				//project onto surface of circle
+				float angle = asinf((mouseCoord.y - playerPosition.y) / magnitude(PQ));
+				Vector2f V = Vector2f(30 * cosf(angle), 30 * sinf(angle));
+				lastMousePosition = Vector2f(playerPosition.x <= mouseCoord.x ? playerPosition.x + V.x : playerPosition.x - V.x, playerPosition.y + V.y);
+				PQ = playerPosition - lastMousePosition;
+			}
+			else
+			{
+				lastMousePosition = mouseCoord;
+			}
+		}
 		Vector2f rightArm = Vector2f(PQ.x * cos(15) + PQ.y * (-sin(15)), PQ.x * sin(15) + PQ.y * cos(15)) * 100.0f;
 		Vector2f leftArm = Vector2f(PQ.x * cos(-15) + PQ.y * (-sin(-15)), PQ.x * sin(-15) + PQ.y * cos(-15)) * 100.0f;
 
 		//get los
-		ConvexShape los = clipLOS(Vector2f(playerHead.getPosition().x + 15, playerHead.getPosition().y + 15), window.mapPixelToCoords(Mouse::getPosition(window)), leftArm, rightArm);
+		std::vector<ConvexShape> los = clipLOS(playerPosition, mouseCoord, leftArm, rightArm);
 
 		//check fog
-		std::vector<ConvexShape> fog = checkFog(walls, Vector2f(playerHead.getPosition().x + 15, playerHead.getPosition().y + 15));
-
-		//TODO : clip walls based on los
+		std::vector<ConvexShape> fog = checkFog(walls, playerPosition);
 
 		//draw background color
-		window.clear(Color(150, 150, 150, 255));
-
-		//draw los
-		window.draw(los);
+		window.clear(Color::White);
 
 		//draw fog and wall
+		for (unsigned int i = 0; i < fog.size(); ++i)
+		{
+				window.draw(fog[i]);
+		}
+
+		//draw los
+		for (unsigned int i = 0; i < los.size(); ++i)
+		{
+			window.draw(los[i]);
+		}
+
+		//draw walls
 		for (unsigned int i = 0; i < walls.size(); ++i)
 		{
-			if (los.getGlobalBounds().intersects(walls[i].getGlobalBounds()))
-			{
-				window.draw(fog[i]);
-				window.draw(walls[i]);
-			}
+			window.draw(walls[i]);
 		}
 
 		//draw player
