@@ -925,15 +925,18 @@ int main()
 			{
 				if (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
 				{
-					playerBody.move(Vector2f(3.0f, 0));
-					playerHead.move(Vector2f(3.0f, 0));
+					while (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+					{
+						playerBody.move(Vector2f(1.0f, 0));
+						playerHead.move(Vector2f(1.0f, 0));
+					}
 					break;
 				}
 			}
-			if (playerHead.getPosition().x < 0)
+			if (playerHead.getPosition().x - playerHead.getRadius() < 0)
 			{
-				playerBody.move(Vector2f(-playerHead.getPosition().x, 0));
-				playerHead.move(Vector2f(-playerHead.getPosition().x, 0));
+				playerBody.move(Vector2f(- (playerHead.getPosition().x - playerHead.getRadius()), 0));
+				playerHead.move(Vector2f(- (playerHead.getPosition().x - playerHead.getRadius()), 0));
 			}
 			if (playerBody.getRotation() != 90)
 			{
@@ -949,15 +952,18 @@ int main()
 			{
 				if (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
 				{
-					playerBody.move(Vector2f(-3.0f, 0));
-					playerHead.move(Vector2f(-3.0f, 0));
+					while (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+					{
+						playerBody.move(Vector2f(-1.0f, 0));
+						playerHead.move(Vector2f(-1.0f, 0));
+					}
 					break;
 				}
 			}
-			if (playerHead.getPosition().x + 2 * playerHead.getRadius() > 1280)
+			if (playerHead.getPosition().x + playerHead.getRadius() > 1280)
 			{
-				playerBody.move(Vector2f(1280 - 2 * playerHead.getRadius() - playerHead.getPosition().x, 0));
-				playerHead.move(Vector2f(1280 - 2 * playerHead.getRadius() - playerHead.getPosition().x, 0));
+				playerBody.move(Vector2f(1280 - (playerHead.getRadius() + playerHead.getPosition().x), 0));
+				playerHead.move(Vector2f(1280 - (playerHead.getRadius() + playerHead.getPosition().x), 0));
 			}
 			if (playerBody.getRotation() != 90)
 			{
@@ -973,15 +979,18 @@ int main()
 			{
 				if (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
 				{
-					playerBody.move(Vector2f(0, 3.0f));
-					playerHead.move(Vector2f(0, 3.0f));
+					while (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+					{
+						playerBody.move(Vector2f(0, 1.0f));
+						playerHead.move(Vector2f(0, 1.0f));
+					}
 					break;
 				}
 			}
-			if (playerHead.getPosition().y < 0)
+			if (playerHead.getPosition().y - playerHead.getRadius() < 0)
 			{
-				playerBody.move(Vector2f(0, -playerHead.getPosition().y));
-				playerHead.move(Vector2f(0, -playerHead.getPosition().y));
+				playerBody.move(Vector2f(0, - (playerHead.getPosition().y - playerHead.getRadius())));
+				playerHead.move(Vector2f(0, - (playerHead.getPosition().y - playerHead.getRadius())));
 			}
 			if (playerBody.getRotation() != 0)
 			{
@@ -996,15 +1005,18 @@ int main()
 			{
 				if (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
 				{
-					playerBody.move(Vector2f(0, -3.0f));
-					playerHead.move(Vector2f(0, -3.0f));
+					while (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+					{
+						playerBody.move(Vector2f(0, -1.0f));
+						playerHead.move(Vector2f(0, -1.0f));
+					}
 					break;
 				}
 			}
-			if (playerHead.getPosition().y + 2 * playerHead.getRadius() > 720)
+			if (playerHead.getPosition().y + playerHead.getRadius() > 720)
 			{
-				playerBody.move(Vector2f(0, 720 - 2 * playerHead.getRadius() - playerHead.getPosition().y));
-				playerHead.move(Vector2f(0, 720 - 2 * playerHead.getRadius() - playerHead.getPosition().y));
+				playerBody.move(Vector2f(0, 720 - (playerHead.getRadius() + playerHead.getPosition().y)));
+				playerHead.move(Vector2f(0, 720 - (playerHead.getRadius() + playerHead.getPosition().y)));
 			}
 			if (playerBody.getRotation() != 0)
 			{
