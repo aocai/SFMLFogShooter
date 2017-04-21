@@ -1,7 +1,17 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <stack>
+#include "SquareEnemy.h"
+#include "CircleProjectile.h"
+#include "AStar.h"
+#include "main.h"
 
 using namespace sf;
+
+RectangleShape playerBody;
+CircleShape playerHead;
+std::vector<std::shared_ptr<CircleProjectile>> *allCircleProjectiles = new std::vector<std::shared_ptr<CircleProjectile>>();
+std::vector<double> *mapMatrix = new std::vector<double>(64*36, 1);
 
 float determinant(Vector2f v1, Vector2f v2)
 {
@@ -16,6 +26,17 @@ float dotProduct(Vector2f v1, Vector2f v2)
 float magnitude(Vector2f v)
 {
 	return sqrt(v.x * v.x + v.y * v.y);
+}
+
+void updateMapMatrix(Vector2f topLeft, Vector2f bottomRight, int value)
+{
+	for (int i = topLeft.y / 20; i < bottomRight.y / 20; ++i)
+	{
+		for (int j = topLeft.x / 20; j < bottomRight.x / 20; ++j)
+		{
+			(*mapMatrix)[i*64 + j] = value;
+		}
+	}
 }
 
 //Description: Clip 2D ray against 4 bounding planes of the screen
@@ -801,6 +822,28 @@ std::vector<ConvexShape> checkShadow(std::vector<RectangleShape> walls, Vector2f
 	return fog;
 }
 
+void enemyPathfinder(Vector2f v, Vector2f g, stack<int> &enemyPath)
+{
+	int start = (64 * (int)(v.y / 20)) + (int)(v.x / 20);
+	int goal = (64 * (int)(g.y / 20)) + (int)(g.x / 20);
+	std::vector<int> result(64*36, 0);
+	bool success = AStar(*mapMatrix, start, goal, result);
+
+	if (success)
+	{
+		while (!enemyPath.empty())
+		{
+			enemyPath.pop();
+		}
+		while (start != goal)
+		{
+			enemyPath.push(goal);
+			goal = result[goal];
+		}
+	}
+	return;
+}
+
 int main()
 {
 	int windowWidth = 1280;
@@ -811,6 +854,9 @@ int main()
 	RenderWindow window(VideoMode(windowWidth, windowHeight), "FogShooter", Style::Default, settings);
 	window.setFramerateLimit(60);
 
+	Clock clock;
+	Clock pathClock;
+
 	std::vector<RectangleShape> walls;
 
 	//create the walls
@@ -819,45 +865,58 @@ int main()
 	rect1.setPosition(Vector2f(120,110));
 	rect1.setFillColor(Color::Black);
 	walls.push_back(rect1);
+	updateMapMatrix(rect1.getPosition(), rect1.getPosition() + rect1.getSize(), -1);
 
 	RectangleShape rect2;
 	rect2.setSize(Vector2f(80, 300));
 	rect2.setPosition(Vector2f(520, 250));
 	rect2.setFillColor(Color::Black);
 	walls.push_back(rect2);
+	updateMapMatrix(rect2.getPosition(), rect2.getPosition() + rect2.getSize(), -1);
 
 	RectangleShape rect3;
 	rect3.setSize(Vector2f(60, 160));
 	rect3.setPosition(Vector2f(300, 50));
 	rect3.setFillColor(Color::Black);
 	walls.push_back(rect3);
+	updateMapMatrix(rect3.getPosition(), rect3.getPosition() + rect3.getSize(), -1);
 
 	RectangleShape rect4;
 	rect4.setSize(Vector2f(250, 110));
 	rect4.setPosition(Vector2f(750, 600));
 	rect4.setFillColor(Color::Black);
 	walls.push_back(rect4);
+	updateMapMatrix(rect4.getPosition(), rect4.getPosition() + rect4.getSize(), -1);
 
 	RectangleShape rect5;
 	rect5.setSize(Vector2f(220, 90));
 	rect5.setPosition(Vector2f(1000, 320));
 	rect5.setFillColor(Color::Black);
 	walls.push_back(rect5);
+	updateMapMatrix(rect5.getPosition(), rect5.getPosition() + rect5.getSize(), -1);
 
 	//creater player shape
-	RectangleShape playerBody;
+//	RectangleShape playerBody;
 	playerBody.setSize(Vector2f(46,20));
 	playerBody.setOrigin(Vector2f(23, 10));
 	playerBody.setPosition(Vector2f(windowWidth / 2, windowHeight / 2));
 	playerBody.setFillColor(Color::Black);
 
-	CircleShape playerHead(15);
+//	CircleShape playerHead(15);
+	playerHead.setRadius(15);
 	playerHead.setOrigin(Vector2f(15, 15));
 	playerHead.setPosition(Vector2f(playerBody.getPosition().x, playerBody.getPosition().y));
 	playerHead.setFillColor(Color::Black);
 
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
+	//spawn enemy (TESTING)
+	SquareEnemy s;
+	s.spawn(Vector2f(20, 20));
+	stack<int> enemyPath;
+	enemyPathfinder(s.re.getPosition(), playerHead.getPosition(), enemyPath);
+
+	std::vector<int> dirtyWalls(walls.size(), 0);
 	unsigned int currentWall = walls.size();
 	float deltaX;
 	float deltaY;
@@ -899,20 +958,31 @@ int main()
 		//if wall is selected by MLB
 		if (currentWall < walls.size())
 		{
+			Vector2f wallSize = walls[currentWall].getSize();
+
+			//free current wall in mapMatrix if not already done so
+			if (dirtyWalls[currentWall] == 0)
+			{
+				updateMapMatrix(walls[currentWall].getPosition(), walls[currentWall].getPosition() + wallSize, 1);
+			}
+			
 			//move wall to new mouse position
 			float posX = window.mapPixelToCoords(Mouse::getPosition(window)).x - deltaX;
 			float posY = window.mapPixelToCoords(Mouse::getPosition(window)).y - deltaY;
 
 			if (posX < 0)
 				posX = 0;
-			else if (posX + walls[currentWall].getSize().x > 1280)
-				posX = 1280 - walls[currentWall].getSize().x;
+			else if (posX + wallSize.x > 1280)
+				posX = 1280 - wallSize.x;
 			if (posY < 0)
 				posY = 0;
-			else if (posY + walls[currentWall].getSize().y > 720)
-				posY = 720 - walls[currentWall].getSize().y;
+			else if (posY + wallSize.y > 720)
+				posY = 720 - wallSize.y;
 
 			walls[currentWall].setPosition(Vector2f(posX, posY));
+
+			//set Wall to dirty and to be updated in pathfinding
+			dirtyWalls[currentWall] = 1;
 		}
 
 		//Check for collision and prevent movement if collision detected
@@ -1028,7 +1098,7 @@ int main()
 		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
 
 		//current player position
-		Vector2f playerPosition = Vector2f(playerHead.getPosition().x, playerHead.getPosition().y);
+		Vector2f playerPosition = playerHead.getPosition();
 		Vector2f PQ;
 
 		//get vector from player position to mouse position
@@ -1083,6 +1153,60 @@ int main()
 		for (unsigned int i = 0; i < walls.size(); ++i)
 		{
 			window.draw(walls[i]);
+		}
+
+		//pathfinding
+		Time elapsed = pathClock.getElapsedTime();
+		if (elapsed.asSeconds() > 1)
+		{
+			//check if walls are moved and update mapMatrix accordingly
+			for (int i = 0; i < dirtyWalls.size(); ++i)
+			{
+				if (dirtyWalls[i] == 1)
+				{
+					updateMapMatrix(walls[i].getPosition(), walls[i].getPosition() + walls[i].getSize(), 1);
+				}
+			}
+			enemyPathfinder(s.re.getPosition(), playerHead.getPosition(), enemyPath);
+			pathClock.restart();
+
+			s.shoot(); //fire a projectile
+		}
+
+		Time elapsed_1 = clock.getElapsedTime();
+		if (elapsed_1.asSeconds() > 0.1 && !enemyPath.empty())
+		{
+			int index = enemyPath.top();
+			enemyPath.pop();
+			int x = index % 64;
+			int y = index / 64;
+			s.position = Vector2f(20 * x, 20 * y);
+			s.re.setPosition(s.position);
+			clock.restart();
+		}
+		//draw enemy
+		window.draw(s.re);
+
+		//update projectile
+		for (unsigned int i = 0; i < allCircleProjectiles->size(); ++i)
+		{
+			(*allCircleProjectiles)[i]->position += (*allCircleProjectiles)[i]->velocity;
+			//check for bounds
+			if ((*allCircleProjectiles)[i]->position.x < 0 || (*allCircleProjectiles)[i]->position.x > 1280 ||
+				(*allCircleProjectiles)[i]->position.y < 0 || (*allCircleProjectiles)[i]->position.y > 720)
+			{
+				allCircleProjectiles->erase(allCircleProjectiles->begin() + i);
+			}
+			else
+			{
+				(*allCircleProjectiles)[i]->ci.move((*allCircleProjectiles)[i]->velocity);
+			}
+		}
+
+		//draw projectiles
+		for (unsigned int i = 0; i < allCircleProjectiles->size(); ++i)
+		{
+			window.draw((*allCircleProjectiles)[i]->ci);
 		}
 
 		//draw player

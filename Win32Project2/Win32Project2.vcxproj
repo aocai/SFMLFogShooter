@@ -152,7 +152,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AStar.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Enemy.cpp" />
+    <ClCompile Include="Projectile.cpp" />
+    <ClCompile Include="CircleProjectile.cpp" />
+    <ClCompile Include="SquareEnemy.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Enemy.h" />
+    <ClInclude Include="CircleProjectile.h" />
+    <ClInclude Include="AStar.h" />
+    <ClInclude Include="PriorityQueue.h" />
+    <ClInclude Include="Projectile.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="SquareEnemy.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
