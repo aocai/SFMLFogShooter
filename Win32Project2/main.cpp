@@ -916,6 +916,13 @@ int main()
 	stack<int> enemyPath;
 	enemyPathfinder(s.re.getPosition(), playerHead.getPosition(), enemyPath);
 
+	Texture texture;
+	texture.loadFromFile("Flandre Scarlet.png");
+
+	Sprite sprite(texture, IntRect(192, 0, 32, 40));
+	sprite.setPosition(Vector2f(400, 400));
+	
+
 	std::vector<int> dirtyWalls(walls.size(), 0);
 	unsigned int currentWall = walls.size();
 	float deltaX;
@@ -1164,7 +1171,8 @@ int main()
 			{
 				if (dirtyWalls[i] == 1)
 				{
-					updateMapMatrix(walls[i].getPosition(), walls[i].getPosition() + walls[i].getSize(), 1);
+					updateMapMatrix(walls[i].getPosition(), walls[i].getPosition() + walls[i].getSize(), -1);
+					dirtyWalls[i] = 0;
 				}
 			}
 			enemyPathfinder(s.re.getPosition(), playerHead.getPosition(), enemyPath);
@@ -1173,6 +1181,7 @@ int main()
 			s.shoot(); //fire a projectile
 		}
 
+		//move enemy
 		Time elapsed_1 = clock.getElapsedTime();
 		if (elapsed_1.asSeconds() > 0.1 && !enemyPath.empty())
 		{
@@ -1212,6 +1221,8 @@ int main()
 		//draw player
 		window.draw(playerBody);
 		window.draw(playerHead);
+
+		window.draw(sprite);
 
 		window.display();
 	}
