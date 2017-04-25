@@ -856,6 +856,7 @@ int main()
 	Clock clock;
 	Clock pathClock;
 	Clock spriteClock;
+	Clock attackClock;
 
 	std::vector<RectangleShape> walls;
 
@@ -915,7 +916,8 @@ int main()
 	Sprite sprite(texture, playerSpriteRect);
 	sprite.setPosition(player.getPosition());
 	
-	int currentSprite = 7;
+	int currentSprite = 6;
+	int attackSprite = -1;
 
 	std::vector<int> dirtyWalls(walls.size(), 0);
 	unsigned int currentWall = walls.size();
@@ -986,7 +988,7 @@ int main()
 			dirtyWalls[currentWall] = 1;
 		}
 
-		//Check for collision and prevent movement if collision detected
+		//Check for collision, sprites and prevent movement if collision detected
 		//do for all directional keys
 		if (Keyboard::isKeyPressed(Keyboard::Left))
 		{
@@ -1007,12 +1009,9 @@ int main()
 				player.move(Vector2f(-player.getPosition().x, 0));
 			}
 
-			if ((currentSprite <= 12 || currentSprite > 18))
+			if ((currentSprite < 12 || currentSprite >= 18))
 			{
-				currentSprite = 13;
-				playerSpriteRect = IntRect(128, 40, 32, 40);
-				sprite.setTextureRect(playerSpriteRect);
-				spriteClock.restart();
+				currentSprite = 12;
 			}
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Right))
@@ -1034,12 +1033,9 @@ int main()
 				player.move(Vector2f(1280 - (player.getSize().x + player.getPosition().x), 0));
 			}
 
-			if ((currentSprite <= 18 || currentSprite > 24))
+			if ((currentSprite < 18 || currentSprite >= 24))
 			{
-				currentSprite = 19;
-				playerSpriteRect = IntRect(64, 80, 32, 40);
-				sprite.setTextureRect(playerSpriteRect);
-				spriteClock.restart();
+				currentSprite = 18;
 			}
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Up))
@@ -1063,12 +1059,9 @@ int main()
 
 			if (!Keyboard::isKeyPressed(Keyboard::Left) && !Keyboard::isKeyPressed(Keyboard::Right))
 			{
-				if (currentSprite > 6)
+				if (currentSprite >= 6)
 				{
-					currentSprite = 1;
-					playerSpriteRect = IntRect(0, 0, 32, 40);
-					sprite.setTextureRect(playerSpriteRect);
-					spriteClock.restart();
+					currentSprite = 0;
 				}
 			}
 		}
@@ -1093,93 +1086,76 @@ int main()
 
 			if (!Keyboard::isKeyPressed(Keyboard::Left) && !Keyboard::isKeyPressed(Keyboard::Right))
 			{
-				if ((currentSprite <= 6 || currentSprite > 12))
+				if ((currentSprite < 6 || currentSprite >= 12))
 				{
-					currentSprite = 7;
-					playerSpriteRect = IntRect(192, 0, 32, 40);
-					sprite.setTextureRect(playerSpriteRect);
-					spriteClock.restart();
+					currentSprite = 6;
 				}
 			}
 		}
 
-		if (spriteClock.getElapsedTime().asSeconds() > 0.15)
+		//check for attack input
+		if (Keyboard::isKeyPressed(Keyboard::Space))
 		{
-			if (currentSprite <= 6)
+			if (currentSprite < 6)
 			{
-				if (currentSprite == 6)
-				{
-					currentSprite = 1;
-					playerSpriteRect.left = 0;
-				}
-				else
-				{
-					currentSprite += 1;
-					playerSpriteRect.left += 32;
-				}
+				attackSprite = 48;
 			}
-			else if (currentSprite > 6 && currentSprite <= 12)
+			else if (currentSprite < 12)
 			{
-				if (currentSprite == 12)
-				{
-					currentSprite = 7;
-					playerSpriteRect.left = 192;
-					playerSpriteRect.top = 0;
-				}
-				else
-				{
-					if (currentSprite == 8)
-					{
-						playerSpriteRect.left = 0;
-						playerSpriteRect.top = 40;
-					}
-					else
-					{
-						playerSpriteRect.left += 32;
-					}
-					currentSprite += 1;
-				}
+				attackSprite = 53;
 			}
-			else if (currentSprite > 12 && currentSprite <= 18)
+			else if (currentSprite < 18)
 			{
-				if (currentSprite == 18)
-				{
-					currentSprite = 13;
-					playerSpriteRect.left = 128;
-					playerSpriteRect.top = 40;
-				}
-				else
-				{
-					if (currentSprite == 16)
-					{
-						playerSpriteRect.left = 0;
-						playerSpriteRect.top = 80;
-					}
-					else
-					{
-						playerSpriteRect.left += 32;
-					}
-					currentSprite += 1;
-				}
+				attackSprite = 58;
 			}
-			else if (currentSprite > 18 && currentSprite <= 24)
+			else if (currentSprite < 24)
 			{
-				if (currentSprite == 24)
-				{
-					currentSprite = 19;
-					playerSpriteRect.left = 64;
-				}
-				else
-				{
-					currentSprite += 1;
-					playerSpriteRect.left += 32;
-				}
+				attackSprite = 63;
 			}
+		}
+
+		//set move sprites
+		if (attackSprite == -1 && spriteClock.getElapsedTime().asSeconds() > 0.15)
+		{
+			playerSpriteRect = IntRect(32 * (currentSprite % 8), 40 * (int)(currentSprite / 8), 32, 40);
+			if (currentSprite == 5)
+			{
+				currentSprite = 0;
+			}
+			else if (currentSprite == 11)
+			{
+				currentSprite = 6;
+			}
+			else if (currentSprite == 17)
+			{
+				currentSprite = 12;
+			}
+			else if (currentSprite == 23)
+			{
+				currentSprite = 18;
+			}
+			currentSprite += 1;
 			sprite.setTextureRect(playerSpriteRect);
 			spriteClock.restart();
 		}
-		sprite.setPosition(player.getPosition());
 
+		//set attack sprites
+		if (attackSprite != -1 && attackClock.getElapsedTime().asSeconds() > 0.1)
+		{
+			playerSpriteRect = IntRect(32 * (attackSprite % 8), 40 * (int)(attackSprite / 8), 32, 40);
+			if (attackSprite == 52 || attackSprite == 57 || attackSprite == 62 || attackSprite == 67)
+			{
+				attackSprite = -1;
+			}
+			else 
+			{
+				attackSprite += 1;
+			}
+			sprite.setTextureRect(playerSpriteRect);
+			attackClock.restart();
+		}
+
+		sprite.setPosition(player.getPosition());
 
 
 		//current mouse coordinates
