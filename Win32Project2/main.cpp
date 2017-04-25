@@ -8,8 +8,7 @@
 
 using namespace sf;
 
-RectangleShape playerBody;
-CircleShape playerHead;
+RectangleShape player;
 std::vector<std::shared_ptr<CircleProjectile>> *allCircleProjectiles = new std::vector<std::shared_ptr<CircleProjectile>>();
 std::vector<double> *mapMatrix = new std::vector<double>(64*36, 1);
 
@@ -856,6 +855,7 @@ int main()
 
 	Clock clock;
 	Clock pathClock;
+	Clock spriteClock;
 
 	std::vector<RectangleShape> walls;
 
@@ -897,16 +897,8 @@ int main()
 
 	//creater player shape
 //	RectangleShape playerBody;
-	playerBody.setSize(Vector2f(46,20));
-	playerBody.setOrigin(Vector2f(23, 10));
-	playerBody.setPosition(Vector2f(windowWidth / 2, windowHeight / 2));
-	playerBody.setFillColor(Color::Black);
-
-//	CircleShape playerHead(15);
-	playerHead.setRadius(15);
-	playerHead.setOrigin(Vector2f(15, 15));
-	playerHead.setPosition(Vector2f(playerBody.getPosition().x, playerBody.getPosition().y));
-	playerHead.setFillColor(Color::Black);
+	player.setSize(Vector2f(32,40));
+	player.setPosition(Vector2f(windowWidth / 2, windowHeight / 2));
 
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
@@ -914,14 +906,16 @@ int main()
 	SquareEnemy s;
 	s.spawn(Vector2f(20, 20));
 	stack<int> enemyPath;
-	enemyPathfinder(s.re.getPosition(), playerHead.getPosition(), enemyPath);
+	enemyPathfinder(s.re.getPosition(), player.getPosition(), enemyPath);
 
 	Texture texture;
 	texture.loadFromFile("Flandre Scarlet.png");
 
-	Sprite sprite(texture, IntRect(192, 0, 32, 40));
-	sprite.setPosition(Vector2f(400, 400));
+	IntRect playerSpriteRect(192, 0, 32, 40);
+	Sprite sprite(texture, playerSpriteRect);
+	sprite.setPosition(player.getPosition());
 	
+	int currentSprite = 7;
 
 	std::vector<int> dirtyWalls(walls.size(), 0);
 	unsigned int currentWall = walls.size();
@@ -996,116 +990,214 @@ int main()
 		//do for all directional keys
 		if (Keyboard::isKeyPressed(Keyboard::Left))
 		{
-			playerBody.move(Vector2f(-3.0f, 0));
-			playerHead.move(Vector2f(-3.0f, 0));
+			player.move(Vector2f(-3.0f, 0));
 			for (unsigned int i = 0; i < walls.size(); ++i)
 			{
-				if (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+				if (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
 				{
-					while (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+					while (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
 					{
-						playerBody.move(Vector2f(1.0f, 0));
-						playerHead.move(Vector2f(1.0f, 0));
+						player.move(Vector2f(1.0f, 0));
 					}
 					break;
 				}
 			}
-			if (playerHead.getPosition().x - playerHead.getRadius() < 0)
+			if (player.getPosition().x < 0)
 			{
-				playerBody.move(Vector2f(- (playerHead.getPosition().x - playerHead.getRadius()), 0));
-				playerHead.move(Vector2f(- (playerHead.getPosition().x - playerHead.getRadius()), 0));
+				player.move(Vector2f(-player.getPosition().x, 0));
 			}
-			if (playerBody.getRotation() != 90)
+
+			if ((currentSprite <= 12 || currentSprite > 18))
 			{
-				playerBody.rotate(-playerBody.getRotation());
-				playerBody.rotate(90);
+				currentSprite = 13;
+				playerSpriteRect = IntRect(128, 40, 32, 40);
+				sprite.setTextureRect(playerSpriteRect);
 			}
+			else
+			{
+				if (spriteClock.getElapsedTime().asSeconds() > 0.15)
+				{
+					if (currentSprite == 18)
+					{
+						currentSprite = 13;
+						playerSpriteRect.left = 128;
+						playerSpriteRect.top = 40;
+					}
+					else
+					{
+						if (currentSprite == 16)
+						{
+							playerSpriteRect.left = 0;
+							playerSpriteRect.top = 80;
+						}
+						else
+						{
+							playerSpriteRect.left += 32;
+						}
+						currentSprite += 1;
+					}
+					sprite.setTextureRect(playerSpriteRect);
+					spriteClock.restart();
+				}
+			}
+			sprite.setPosition(player.getPosition());
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Right))
 		{
-			playerBody.move(Vector2f(3.0f, 0));
-			playerHead.move(Vector2f(3.0f, 0));
+			player.move(Vector2f(3.0f, 0));
 			for (unsigned int i = 0; i < walls.size(); ++i)
 			{
-				if (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+				if (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
 				{
-					while (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+					while (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
 					{
-						playerBody.move(Vector2f(-1.0f, 0));
-						playerHead.move(Vector2f(-1.0f, 0));
+						player.move(Vector2f(-1.0f, 0));
 					}
 					break;
 				}
 			}
-			if (playerHead.getPosition().x + playerHead.getRadius() > 1280)
+			if (player.getPosition().x + player.getSize().x > 1280)
 			{
-				playerBody.move(Vector2f(1280 - (playerHead.getRadius() + playerHead.getPosition().x), 0));
-				playerHead.move(Vector2f(1280 - (playerHead.getRadius() + playerHead.getPosition().x), 0));
+				player.move(Vector2f(1280 - (player.getSize().x + player.getPosition().x), 0));
 			}
-			if (playerBody.getRotation() != 90)
+
+			if ((currentSprite <= 18 || currentSprite > 24))
 			{
-				playerBody.rotate(-playerBody.getRotation());
-				playerBody.rotate(90);
+				currentSprite = 19;
+				playerSpriteRect = IntRect(64, 80, 32, 40);
+				sprite.setTextureRect(playerSpriteRect);
 			}
+			else
+			{
+				if (spriteClock.getElapsedTime().asSeconds() > 0.15)
+				{
+					if (currentSprite == 24)
+					{
+						currentSprite = 19;
+						playerSpriteRect.left = 64;
+					}
+					else
+					{
+						currentSprite += 1;
+						playerSpriteRect.left += 32;
+					}
+					sprite.setTextureRect(playerSpriteRect);
+					spriteClock.restart();
+				}
+			}
+			sprite.setPosition(player.getPosition());
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Up))
 		{
-			playerBody.move(Vector2f(0, -3.0f));
-			playerHead.move(Vector2f(0, -3.0f));
+			player.move(Vector2f(0, -3.0f));
 			for (unsigned int i = 0; i < walls.size(); ++i)
 			{
-				if (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+				if (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
 				{
-					while (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+					while (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
 					{
-						playerBody.move(Vector2f(0, 1.0f));
-						playerHead.move(Vector2f(0, 1.0f));
+						player.move(Vector2f(0, 1.0f));
 					}
 					break;
 				}
 			}
-			if (playerHead.getPosition().y - playerHead.getRadius() < 0)
+			if (player.getPosition().y < 0)
 			{
-				playerBody.move(Vector2f(0, - (playerHead.getPosition().y - playerHead.getRadius())));
-				playerHead.move(Vector2f(0, - (playerHead.getPosition().y - playerHead.getRadius())));
+				player.move(Vector2f(0, -player.getPosition().y));
 			}
-			if (playerBody.getRotation() != 0)
+
+			if (!Keyboard::isKeyPressed(Keyboard::Left) && !Keyboard::isKeyPressed(Keyboard::Right))
 			{
-				playerBody.rotate(-playerBody.getRotation());
+				if (currentSprite > 6)
+				{
+					currentSprite = 1;
+					playerSpriteRect = IntRect(0, 0, 32, 40);
+					sprite.setTextureRect(playerSpriteRect);
+				}
+				else
+				{
+					if (spriteClock.getElapsedTime().asSeconds() > 0.15)
+					{
+						if (currentSprite == 6)
+						{
+							currentSprite = 1;
+							playerSpriteRect.left = 0;
+						}
+						else
+						{
+							currentSprite += 1;
+							playerSpriteRect.left += 32;
+						}
+						sprite.setTextureRect(playerSpriteRect);
+						spriteClock.restart();
+					}
+				}
 			}
+			sprite.setPosition(player.getPosition());
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Down))
 		{
-			playerBody.move(Vector2f(0, 3.0f));
-			playerHead.move(Vector2f(0, 3.0f));
+			player.move(Vector2f(0, 3.0f));
 			for (unsigned int i = 0; i < walls.size(); ++i)
 			{
-				if (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+				if (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
 				{
-					while (walls[i].getGlobalBounds().intersects(playerHead.getGlobalBounds()))
+					while (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
 					{
-						playerBody.move(Vector2f(0, -1.0f));
-						playerHead.move(Vector2f(0, -1.0f));
+						player.move(Vector2f(0, -1.0f));
 					}
 					break;
 				}
 			}
-			if (playerHead.getPosition().y + playerHead.getRadius() > 720)
+			if (player.getPosition().y + player.getSize().y > 720)
 			{
-				playerBody.move(Vector2f(0, 720 - (playerHead.getRadius() + playerHead.getPosition().y)));
-				playerHead.move(Vector2f(0, 720 - (playerHead.getRadius() + playerHead.getPosition().y)));
+				player.move(Vector2f(0, 720 - (player.getSize().y + player.getPosition().y)));
 			}
-			if (playerBody.getRotation() != 0)
+
+			if (!Keyboard::isKeyPressed(Keyboard::Left) && !Keyboard::isKeyPressed(Keyboard::Right))
 			{
-				playerBody.rotate(-playerBody.getRotation());
+				if ((currentSprite <= 6 || currentSprite > 12))
+				{
+					currentSprite = 7;
+					playerSpriteRect = IntRect(192, 0, 32, 40);
+					sprite.setTextureRect(playerSpriteRect);
+				}
+				else
+				{
+					if (spriteClock.getElapsedTime().asSeconds() > 0.15)
+					{
+						if (currentSprite == 12)
+						{
+							currentSprite = 7;
+							playerSpriteRect.left = 192;
+							playerSpriteRect.top = 0;
+						}
+						else
+						{
+							if (currentSprite == 8)
+							{
+								playerSpriteRect.left = 0;
+								playerSpriteRect.top = 40;
+							}
+							else
+							{
+								playerSpriteRect.left += 32;
+							}
+							currentSprite += 1;
+						}
+						sprite.setTextureRect(playerSpriteRect);
+						spriteClock.restart();
+					}
+				}
 			}
+			sprite.setPosition(player.getPosition());
 		}
 
 		//current mouse coordinates
 		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
 
 		//current player position
-		Vector2f playerPosition = playerHead.getPosition();
+		Vector2f playerPosition = player.getPosition() + Vector2f(16,20);
 		Vector2f PQ;
 
 		//get vector from player position to mouse position
@@ -1147,7 +1239,7 @@ int main()
 		//draw shadow first
 		for (unsigned int i = 0; i < shadow.size(); ++i)
 		{
-				window.draw(shadow[i]);
+			window.draw(shadow[i]);
 		}
 
 		//draw player view area by drawing the opposite
@@ -1175,7 +1267,7 @@ int main()
 					dirtyWalls[i] = 0;
 				}
 			}
-			enemyPathfinder(s.re.getPosition(), playerHead.getPosition(), enemyPath);
+			enemyPathfinder(s.re.getPosition(), player.getPosition(), enemyPath);
 			pathClock.restart();
 
 			s.shoot(); //fire a projectile
@@ -1219,9 +1311,6 @@ int main()
 		}
 
 		//draw player
-		window.draw(playerBody);
-		window.draw(playerHead);
-
 		window.draw(sprite);
 
 		window.display();

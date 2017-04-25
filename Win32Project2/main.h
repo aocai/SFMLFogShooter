@@ -4,8 +4,7 @@
 
 using namespace sf;
 
-extern RectangleShape playerBody;
-extern CircleShape playerHead;
+extern RectangleShape player;
 extern std::vector<std::shared_ptr<CircleProjectile>> *allCircleProjectiles;
 extern std::vector<double> *mapMatrix; //1 = valid path, -1 = non-valid, 20 screen pixels per matrix unit
 
