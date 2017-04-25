@@ -1012,35 +1012,8 @@ int main()
 				currentSprite = 13;
 				playerSpriteRect = IntRect(128, 40, 32, 40);
 				sprite.setTextureRect(playerSpriteRect);
+				spriteClock.restart();
 			}
-			else
-			{
-				if (spriteClock.getElapsedTime().asSeconds() > 0.15)
-				{
-					if (currentSprite == 18)
-					{
-						currentSprite = 13;
-						playerSpriteRect.left = 128;
-						playerSpriteRect.top = 40;
-					}
-					else
-					{
-						if (currentSprite == 16)
-						{
-							playerSpriteRect.left = 0;
-							playerSpriteRect.top = 80;
-						}
-						else
-						{
-							playerSpriteRect.left += 32;
-						}
-						currentSprite += 1;
-					}
-					sprite.setTextureRect(playerSpriteRect);
-					spriteClock.restart();
-				}
-			}
-			sprite.setPosition(player.getPosition());
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Right))
 		{
@@ -1066,26 +1039,8 @@ int main()
 				currentSprite = 19;
 				playerSpriteRect = IntRect(64, 80, 32, 40);
 				sprite.setTextureRect(playerSpriteRect);
+				spriteClock.restart();
 			}
-			else
-			{
-				if (spriteClock.getElapsedTime().asSeconds() > 0.15)
-				{
-					if (currentSprite == 24)
-					{
-						currentSprite = 19;
-						playerSpriteRect.left = 64;
-					}
-					else
-					{
-						currentSprite += 1;
-						playerSpriteRect.left += 32;
-					}
-					sprite.setTextureRect(playerSpriteRect);
-					spriteClock.restart();
-				}
-			}
-			sprite.setPosition(player.getPosition());
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Up))
 		{
@@ -1113,27 +1068,9 @@ int main()
 					currentSprite = 1;
 					playerSpriteRect = IntRect(0, 0, 32, 40);
 					sprite.setTextureRect(playerSpriteRect);
-				}
-				else
-				{
-					if (spriteClock.getElapsedTime().asSeconds() > 0.15)
-					{
-						if (currentSprite == 6)
-						{
-							currentSprite = 1;
-							playerSpriteRect.left = 0;
-						}
-						else
-						{
-							currentSprite += 1;
-							playerSpriteRect.left += 32;
-						}
-						sprite.setTextureRect(playerSpriteRect);
-						spriteClock.restart();
-					}
+					spriteClock.restart();
 				}
 			}
-			sprite.setPosition(player.getPosition());
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Down))
 		{
@@ -1161,37 +1098,89 @@ int main()
 					currentSprite = 7;
 					playerSpriteRect = IntRect(192, 0, 32, 40);
 					sprite.setTextureRect(playerSpriteRect);
+					spriteClock.restart();
+				}
+			}
+		}
+
+		if (spriteClock.getElapsedTime().asSeconds() > 0.15)
+		{
+			if (currentSprite <= 6)
+			{
+				if (currentSprite == 6)
+				{
+					currentSprite = 1;
+					playerSpriteRect.left = 0;
 				}
 				else
 				{
-					if (spriteClock.getElapsedTime().asSeconds() > 0.15)
-					{
-						if (currentSprite == 12)
-						{
-							currentSprite = 7;
-							playerSpriteRect.left = 192;
-							playerSpriteRect.top = 0;
-						}
-						else
-						{
-							if (currentSprite == 8)
-							{
-								playerSpriteRect.left = 0;
-								playerSpriteRect.top = 40;
-							}
-							else
-							{
-								playerSpriteRect.left += 32;
-							}
-							currentSprite += 1;
-						}
-						sprite.setTextureRect(playerSpriteRect);
-						spriteClock.restart();
-					}
+					currentSprite += 1;
+					playerSpriteRect.left += 32;
 				}
 			}
-			sprite.setPosition(player.getPosition());
+			else if (currentSprite > 6 && currentSprite <= 12)
+			{
+				if (currentSprite == 12)
+				{
+					currentSprite = 7;
+					playerSpriteRect.left = 192;
+					playerSpriteRect.top = 0;
+				}
+				else
+				{
+					if (currentSprite == 8)
+					{
+						playerSpriteRect.left = 0;
+						playerSpriteRect.top = 40;
+					}
+					else
+					{
+						playerSpriteRect.left += 32;
+					}
+					currentSprite += 1;
+				}
+			}
+			else if (currentSprite > 12 && currentSprite <= 18)
+			{
+				if (currentSprite == 18)
+				{
+					currentSprite = 13;
+					playerSpriteRect.left = 128;
+					playerSpriteRect.top = 40;
+				}
+				else
+				{
+					if (currentSprite == 16)
+					{
+						playerSpriteRect.left = 0;
+						playerSpriteRect.top = 80;
+					}
+					else
+					{
+						playerSpriteRect.left += 32;
+					}
+					currentSprite += 1;
+				}
+			}
+			else if (currentSprite > 18 && currentSprite <= 24)
+			{
+				if (currentSprite == 24)
+				{
+					currentSprite = 19;
+					playerSpriteRect.left = 64;
+				}
+				else
+				{
+					currentSprite += 1;
+					playerSpriteRect.left += 32;
+				}
+			}
+			sprite.setTextureRect(playerSpriteRect);
+			spriteClock.restart();
 		}
+		sprite.setPosition(player.getPosition());
+
+
 
 		//current mouse coordinates
 		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
