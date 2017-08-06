@@ -11,7 +11,7 @@ using namespace std;
 
 struct AStarQNode
 {
-	int position; //y*64 + x
+	int position; //y*128 + x
 	double f, g, h;
 };
 
@@ -43,10 +43,10 @@ struct AStarQNode
 double heuristic(int start, int end)
 {
 	int x1, x2, y1, y2;
-	y1 = start / 64;
-	x1 = start % 64;
-	y2 = end / 64;
-	x2 = end % 64;
+	y1 = start / 128;
+	x1 = start % 128;
+	y2 = end / 128;
+	x2 = end % 128;
 	return abs(x1 - x2) + abs(y1 - y2);
 }
 
@@ -54,16 +54,16 @@ vector<int> getNeighbours(const vector<double> &maze, int position)
 {
 	vector<int> neighbours;
 	int x, y;
-	y = position / 64;
-	x = position % 64;
+	y = position / 128;
+	x = position % 128;
 	if (x > 0 && maze[position - 1] != -1)
 		neighbours.push_back(position - 1);
-	if (x < 63 && maze[position + 1] != -1)
+	if (x < 127 && maze[position + 1] != -1)
 		neighbours.push_back(position + 1);
-	if (y > 0 && maze[position - 64] != -1)
-		neighbours.push_back(position - 64);
-	if (y < 35 && maze[position + 64] != -1)
-		neighbours.push_back(position + 64);
+	if (y > 0 && maze[position - 128] != -1)
+		neighbours.push_back(position - 128);
+	if (y < 71 && maze[position + 128] != -1)
+		neighbours.push_back(position + 128);
 	return neighbours;
 }
 

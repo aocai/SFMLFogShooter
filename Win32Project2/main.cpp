@@ -3,14 +3,13 @@
 #include <stack>
 #include "SquareEnemy.h"
 #include "CircleProjectile.h"
-#include "AStar.h"
+#include "Player.h"
 #include "main.h"
 
 using namespace sf;
 
-RectangleShape player;
-std::vector<std::shared_ptr<CircleProjectile>> *allCircleProjectiles = new std::vector<std::shared_ptr<CircleProjectile>>();
-std::vector<double> *mapMatrix = new std::vector<double>(64*36, 1);
+//RectangleShape player;
+std::vector<double> *mapMatrix = new std::vector<double>(128*72, 1);
 
 float determinant(Vector2f v1, Vector2f v2)
 {
@@ -29,13 +28,18 @@ float magnitude(Vector2f v)
 
 void updateMapMatrix(Vector2f topLeft, Vector2f bottomRight, int value)
 {
-	for (int i = topLeft.y / 20; i < bottomRight.y / 20; ++i)
+	for (int i = topLeft.y / 10; i < bottomRight.y / 10; ++i)
 	{
-		for (int j = topLeft.x / 20; j < bottomRight.x / 20; ++j)
+		for (int j = topLeft.x / 10; j < bottomRight.x / 10; ++j)
 		{
-			(*mapMatrix)[i*64 + j] = value;
+			(*mapMatrix)[i*128 + j] = value;
 		}
 	}
+}
+
+Vector2f rotateVector2f(Vector2f v, double angle)
+{
+	return Vector2f(v.x * cos(angle) + v.y * (-sin(angle)), v.x * sin(angle) + v.y * cos(angle));
 }
 
 //Description: Clip 2D ray against 4 bounding planes of the screen
@@ -821,11 +825,12 @@ std::vector<ConvexShape> checkShadow(std::vector<RectangleShape> walls, Vector2f
 	return fog;
 }
 
+/*
 void enemyPathfinder(Vector2f v, Vector2f g, stack<int> &enemyPath)
 {
-	int start = (64 * (int)(v.y / 20)) + (int)(v.x / 20);
-	int goal = (64 * (int)(g.y / 20)) + (int)(g.x / 20);
-	std::vector<int> result(64*36, 0);
+	int start = (128 * (int)(v.y / 10)) + (int)(v.x / 10);
+	int goal = (128 * (int)(g.y / 10)) + (int)(g.x / 10);
+	std::vector<int> result(128*72, 0);
 	bool success = AStar(*mapMatrix, start, goal, result);
 
 	if (success)
@@ -842,6 +847,7 @@ void enemyPathfinder(Vector2f v, Vector2f g, stack<int> &enemyPath)
 	}
 	return;
 }
+*/
 
 int main()
 {
@@ -857,6 +863,7 @@ int main()
 	Clock pathClock;
 	Clock spriteClock;
 	Clock attackClock;
+	Clock CirnoClock;
 
 	std::vector<RectangleShape> walls;
 
@@ -896,33 +903,39 @@ int main()
 	walls.push_back(rect5);
 	updateMapMatrix(rect5.getPosition(), rect5.getPosition() + rect5.getSize(), -1);
 
-	//creater player shape
-//	RectangleShape playerBody;
-	player.setSize(Vector2f(32,40));
-	player.setPosition(Vector2f(windowWidth / 2, windowHeight / 2));
+
+	std::vector<std::shared_ptr<Projectile>> allProjectiles;
+
+	Player player(Vector2f(32,40), Vector2f(windowWidth / 2, windowHeight / 2));
 
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
+	std::vector<std::shared_ptr<Enemy>> enemyVector;
+
 	//spawn enemy (TESTING)
-	SquareEnemy s;
-	s.spawn(Vector2f(20, 20));
-	stack<int> enemyPath;
-	enemyPathfinder(s.re.getPosition(), player.getPosition(), enemyPath);
+	std::shared_ptr<Enemy> s(new SquareEnemy);
+	s->spawn(Vector2f(20, 20));
+	Texture Cirno;
+	Cirno.loadFromFile("Cirno.png");
+	s->setSprite(Cirno);
 
-	Texture texture;
-	texture.loadFromFile("Flandre Scarlet.png");
+	enemyVector.push_back(s);
 
-	IntRect playerSpriteRect(192, 0, 32, 40);
-	Sprite sprite(texture, playerSpriteRect);
-	sprite.setPosition(player.getPosition());
+	//stack<int> enemyPath;
+	std::vector<int> workVector(128 * 72, 0);
+	s->enemyPathfinder(player.getPosition(), workVector);
+	//enemyPathfinder(s.getEnemy()->getPosition(), player.getPosition(), enemyPath);
+	Vector2f CirnoTarget = s->getEnemy()->getPosition();
+
+	Texture Flandre;
+	Flandre.loadFromFile("Flandre Scarlet.png");
+	player.setSprite(Flandre);
 	
-	int currentSprite = 6;
-	int attackSprite = -1;
-
 	std::vector<int> dirtyWalls(walls.size(), 0);
 	unsigned int currentWall = walls.size();
 	float deltaX;
 	float deltaY;
+
 	while (window.isOpen())
 	{
 		Event event;
@@ -988,181 +1001,105 @@ int main()
 			dirtyWalls[currentWall] = 1;
 		}
 
-		//Check for collision, sprites and prevent movement if collision detected
+		//Player Movement. Prevent movement if collision detected
 		//do for all directional keys
-		if (Keyboard::isKeyPressed(Keyboard::Left))
+		if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
 		{
-			player.move(Vector2f(-3.0f, 0));
+			player.getPlayer()->move(Vector2f(-3.0f, 0));
 			for (unsigned int i = 0; i < walls.size(); ++i)
 			{
-				if (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
+				while (walls[i].getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
-					while (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
-					{
-						player.move(Vector2f(1.0f, 0));
-					}
-					break;
+					player.getPlayer()->move(Vector2f(1.0f, 0));
 				}
 			}
 			if (player.getPosition().x < 0)
 			{
-				player.move(Vector2f(-player.getPosition().x, 0));
+				player.getPlayer()->move(Vector2f(-player.getPosition().x, 0));
 			}
 
-			if ((currentSprite < 12 || currentSprite >= 18))
-			{
-				currentSprite = 12;
-			}
+			player.updateSpriteNumber(0);
+			player.getSprite()->setPosition(player.getPosition());
 		}
-		if (Keyboard::isKeyPressed(Keyboard::Right))
+		if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
 		{
-			player.move(Vector2f(3.0f, 0));
+			player.getPlayer()->move(Vector2f(3.0f, 0));
 			for (unsigned int i = 0; i < walls.size(); ++i)
 			{
-				if (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
+				while (walls[i].getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
-					while (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
-					{
-						player.move(Vector2f(-1.0f, 0));
-					}
-					break;
+					player.getPlayer()->move(Vector2f(-1.0f, 0));
 				}
 			}
-			if (player.getPosition().x + player.getSize().x > 1280)
+			if (player.getPosition().x + player.getPlayer()->getSize().x > 1280)
 			{
-				player.move(Vector2f(1280 - (player.getSize().x + player.getPosition().x), 0));
+				player.getPlayer()->move(Vector2f(1280 - (player.getPlayer()->getSize().x + player.getPlayer()->getPosition().x), 0));
 			}
 
-			if ((currentSprite < 18 || currentSprite >= 24))
-			{
-				currentSprite = 18;
-			}
+			player.updateSpriteNumber(1);
+			player.getSprite()->setPosition(player.getPosition());
 		}
-		if (Keyboard::isKeyPressed(Keyboard::Up))
+		if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
 		{
-			player.move(Vector2f(0, -3.0f));
+			player.getPlayer()->move(Vector2f(0, -3.0f));
 			for (unsigned int i = 0; i < walls.size(); ++i)
 			{
-				if (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
+				while (walls[i].getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
-					while (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
-					{
-						player.move(Vector2f(0, 1.0f));
-					}
-					break;
+					player.getPlayer()->move(Vector2f(0, 1.0f));
 				}
 			}
 			if (player.getPosition().y < 0)
 			{
-				player.move(Vector2f(0, -player.getPosition().y));
+				player.getPlayer()->move(Vector2f(0, -player.getPlayer()->getPosition().y));
 			}
 
-			if (!Keyboard::isKeyPressed(Keyboard::Left) && !Keyboard::isKeyPressed(Keyboard::Right))
+			if (!(Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D)))
 			{
-				if (currentSprite >= 6)
-				{
-					currentSprite = 0;
-				}
+				player.updateSpriteNumber(2);
 			}
+			player.getSprite()->setPosition(player.getPosition());
 		}
-		if (Keyboard::isKeyPressed(Keyboard::Down))
+		if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
 		{
-			player.move(Vector2f(0, 3.0f));
+			player.getPlayer()->move(Vector2f(0, 3.0f));
 			for (unsigned int i = 0; i < walls.size(); ++i)
 			{
-				if (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
+				while (walls[i].getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
-					while (walls[i].getGlobalBounds().intersects(player.getGlobalBounds()))
-					{
-						player.move(Vector2f(0, -1.0f));
-					}
-					break;
+					player.getPlayer()->move(Vector2f(0, -1.0f));
 				}
 			}
-			if (player.getPosition().y + player.getSize().y > 720)
+			if (player.getPlayer()->getPosition().y + player.getPlayer()->getSize().y > 720)
 			{
-				player.move(Vector2f(0, 720 - (player.getSize().y + player.getPosition().y)));
+				player.getPlayer()->move(Vector2f(0, 720 - (player.getPlayer()->getSize().y + player.getPlayer()->getPosition().y)));
 			}
 
-			if (!Keyboard::isKeyPressed(Keyboard::Left) && !Keyboard::isKeyPressed(Keyboard::Right))
+			if (!(Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D)))
 			{
-				if ((currentSprite < 6 || currentSprite >= 12))
-				{
-					currentSprite = 6;
-				}
+				player.updateSpriteNumber(3);
 			}
+			player.getSprite()->setPosition(player.getPosition());
 		}
 
 		//check for attack input
-		if (Keyboard::isKeyPressed(Keyboard::Space))
+		if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Numpad0))
 		{
-			if (currentSprite < 6)
-			{
-				attackSprite = 48;
-			}
-			else if (currentSprite < 12)
-			{
-				attackSprite = 53;
-			}
-			else if (currentSprite < 18)
-			{
-				attackSprite = 58;
-			}
-			else if (currentSprite < 24)
-			{
-				attackSprite = 63;
-			}
+			player.updateSpriteNumber(4);
 		}
 
-		//set move sprites
-		if (attackSprite == -1 && spriteClock.getElapsedTime().asSeconds() > 0.15)
+		//set player move sprites
+		if (spriteClock.getElapsedTime().asSeconds() > 0.10)
 		{
-			playerSpriteRect = IntRect(32 * (currentSprite % 8), 40 * (int)(currentSprite / 8), 32, 40);
-			if (currentSprite == 5)
-			{
-				currentSprite = 0;
-			}
-			else if (currentSprite == 11)
-			{
-				currentSprite = 6;
-			}
-			else if (currentSprite == 17)
-			{
-				currentSprite = 12;
-			}
-			else if (currentSprite == 23)
-			{
-				currentSprite = 18;
-			}
-			currentSprite += 1;
-			sprite.setTextureRect(playerSpriteRect);
+			player.updateSprite();
 			spriteClock.restart();
 		}
-
-		//set attack sprites
-		if (attackSprite != -1 && attackClock.getElapsedTime().asSeconds() > 0.1)
-		{
-			playerSpriteRect = IntRect(32 * (attackSprite % 8), 40 * (int)(attackSprite / 8), 32, 40);
-			if (attackSprite == 52 || attackSprite == 57 || attackSprite == 62 || attackSprite == 67)
-			{
-				attackSprite = -1;
-			}
-			else 
-			{
-				attackSprite += 1;
-			}
-			sprite.setTextureRect(playerSpriteRect);
-			attackClock.restart();
-		}
-
-		sprite.setPosition(player.getPosition());
-
 
 		//current mouse coordinates
 		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
 
 		//current player position
-		Vector2f playerPosition = player.getPosition() + Vector2f(16,20);
+		Vector2f playerPosition = player.getPosition() + Vector2f(16, 20);
 		Vector2f PQ;
 
 		//get vector from player position to mouse position
@@ -1175,22 +1112,16 @@ int main()
 			PQ = playerPosition - mouseCoord;
 			if (magnitude(PQ) < 30)
 			{
-				//mouse position too close to player position.
-				//project mouse position onto surface of circle
-				float angle = asinf((mouseCoord.y - playerPosition.y) / magnitude(PQ));
-				Vector2f V = Vector2f(30 * cosf(angle), 30 * sinf(angle));
-				lastMousePosition = Vector2f(playerPosition.x <= mouseCoord.x ? playerPosition.x + V.x : playerPosition.x - V.x, playerPosition.y + V.y);
-				PQ = playerPosition - lastMousePosition;
+				//mouse position too close to player position. project mouse position onto surface of circle
+				PQ = (PQ / magnitude(PQ)) * 30.f;
 			}
-			else
-			{
-				lastMousePosition = mouseCoord;
-			}
+			lastMousePosition = mouseCoord;
 		}
 
 		//get the left and right vectors of the player view area (left and right LOS arms) by rotating vector PQ by 15 degrees
-		Vector2f rightArm = Vector2f(PQ.x * cos(15) + PQ.y * (-sin(15)), PQ.x * sin(15) + PQ.y * cos(15)) * 100.0f;
-		Vector2f leftArm = Vector2f(PQ.x * cos(-15) + PQ.y * (-sin(-15)), PQ.x * sin(-15) + PQ.y * cos(-15)) * 100.0f;
+
+		Vector2f rightArm = rotateVector2f(PQ, 15) * 100.0f;
+		Vector2f leftArm = rotateVector2f(PQ, -15) * 100.0f;
 
 		//get los ConvexShapes
 		std::vector<ConvexShape> los = clipLOS(playerPosition, mouseCoord, leftArm, rightArm);
@@ -1200,6 +1131,143 @@ int main()
 
 		//draw background color
 		window.clear(Color::White);
+
+		//pathfinding
+		Time elapsed = pathClock.getElapsedTime();
+		if (elapsed.asSeconds() > 1)
+		{
+			//check if walls are moved and update mapMatrix accordingly
+			for (int i = 0; i < dirtyWalls.size(); ++i)
+			{
+				if (dirtyWalls[i] == 1)
+				{
+					updateMapMatrix(walls[i].getPosition(), walls[i].getPosition() + walls[i].getSize(), -1);
+					dirtyWalls[i] = 0;
+				}
+			}
+			for (int i = 0; i < enemyVector.size(); ++i)
+			{
+				if (!enemyVector[i]->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				{
+					enemyVector[i]->enemyPathfinder(player.getPosition(), workVector);
+				}
+			}
+			//s->enemyPathfinder(player.getPosition(), workVector);
+			//enemyPathfinder(s.getEnemy()->getPosition(), player.getPosition(), enemyPath);
+			pathClock.restart();
+
+			//TODO: fire projectile only if in range and no obstacles
+			allProjectiles.push_back(s->shoot(playerPosition)); //fire a projectile
+		}
+
+		//do everything
+		for (int i = 0; i < enemyVector.size(); ++i)
+		{
+			enemyVector[i]->updateEnemy();
+			if (enemyVector[i]->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+			{
+				//reached
+				enemyVector[i]->clearStack();
+			}
+		}
+
+		/*
+		if (magnitude(CirnoTarget - s->getEnemy()->getPosition()) < 3)
+		{
+			if (!s->path.empty())
+			{
+				int index = s->path.top();
+				s->path.pop();
+				int x = index % 128;
+				int y = index / 128;
+				CirnoTarget = Vector2f(10 * x, 10 * y);
+			}
+		}
+
+		if (magnitude(s->getEnemy()->getPosition() - player.getPosition()) > 5 && !s->path.empty())
+		{
+			//interpolate Cirno to target position
+			Vector2f unitV = CirnoTarget - s->getEnemy()->getPosition();
+			unitV = unitV / magnitude(unitV);
+			unitV *= 3.f;
+
+			int awsd = 0;
+			float maxf = 0;
+			if (abs(unitV.x) > maxf)
+			{
+				maxf = abs(unitV.x);
+				awsd = unitV.x < 0 ? 0 : 1;
+			}
+			if (abs(unitV.y) > maxf)
+			{
+				maxf = abs(unitV.y);
+				awsd = unitV.y < 0 ? 2 : 3;
+			}
+
+			s->getEnemy()->move(unitV);
+
+			while (s->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+			{
+				s->getEnemy()->move(unitV / -3.f);
+			}
+
+			s->getSprite()->setPosition(s->getEnemy()->getPosition());
+
+			s->updateSpriteNumber(awsd);
+		}
+		else
+		{
+			while (!s->path.empty())
+				s->path.pop();
+		}
+		*/
+		
+		Time elapsed_1 = CirnoClock.getElapsedTime();
+		if (elapsed_1.asSeconds() > 0.1)
+		{
+			s->updateSprite();
+			CirnoClock.restart();
+		}
+
+		/*
+		//move enemy
+		Time elapsed_1 = clock.getElapsedTime();
+		if (elapsed_1.asSeconds() > 0.1 && !enemyPath.empty())
+		{
+			int index = enemyPath.top();
+			enemyPath.pop();
+			int x = index % 128;
+			int y = index / 128;
+			Vector2f newPosition = Vector2f(10 * x, 10 * y);
+			s.getEnemy()->setPosition(newPosition);
+			clock.restart();
+		}
+		*/
+
+		//draw enemy
+		window.draw(*(s->getSprite()));
+
+		//update projectile
+		for (unsigned int i = 0; i < allProjectiles.size(); ++i)
+		{
+			allProjectiles[i]->position += allProjectiles[i]->velocity;
+			//check for bounds
+			if (allProjectiles[i]->position.x < 0 || allProjectiles[i]->position.x > 1280 ||
+				allProjectiles[i]->position.y < 0 || allProjectiles[i]->position.y > 720)
+			{
+				allProjectiles.erase(allProjectiles.begin() + i);
+			}
+			else
+			{
+				allProjectiles[i]->getProjectile()->move(allProjectiles[i]->velocity);
+			}
+		}
+
+		//draw projectiles
+		for (unsigned int i = 0; i < allProjectiles.size(); ++i)
+		{
+			window.draw(*(allProjectiles[i]->getProjectile()));
+		}
 
 		//draw shadow first
 		for (unsigned int i = 0; i < shadow.size(); ++i)
@@ -1219,64 +1287,8 @@ int main()
 			window.draw(walls[i]);
 		}
 
-		//pathfinding
-		Time elapsed = pathClock.getElapsedTime();
-		if (elapsed.asSeconds() > 1)
-		{
-			//check if walls are moved and update mapMatrix accordingly
-			for (int i = 0; i < dirtyWalls.size(); ++i)
-			{
-				if (dirtyWalls[i] == 1)
-				{
-					updateMapMatrix(walls[i].getPosition(), walls[i].getPosition() + walls[i].getSize(), -1);
-					dirtyWalls[i] = 0;
-				}
-			}
-			enemyPathfinder(s.re.getPosition(), player.getPosition(), enemyPath);
-			pathClock.restart();
-
-			s.shoot(); //fire a projectile
-		}
-
-		//move enemy
-		Time elapsed_1 = clock.getElapsedTime();
-		if (elapsed_1.asSeconds() > 0.1 && !enemyPath.empty())
-		{
-			int index = enemyPath.top();
-			enemyPath.pop();
-			int x = index % 64;
-			int y = index / 64;
-			s.position = Vector2f(20 * x, 20 * y);
-			s.re.setPosition(s.position);
-			clock.restart();
-		}
-		//draw enemy
-		window.draw(s.re);
-
-		//update projectile
-		for (unsigned int i = 0; i < allCircleProjectiles->size(); ++i)
-		{
-			(*allCircleProjectiles)[i]->position += (*allCircleProjectiles)[i]->velocity;
-			//check for bounds
-			if ((*allCircleProjectiles)[i]->position.x < 0 || (*allCircleProjectiles)[i]->position.x > 1280 ||
-				(*allCircleProjectiles)[i]->position.y < 0 || (*allCircleProjectiles)[i]->position.y > 720)
-			{
-				allCircleProjectiles->erase(allCircleProjectiles->begin() + i);
-			}
-			else
-			{
-				(*allCircleProjectiles)[i]->ci.move((*allCircleProjectiles)[i]->velocity);
-			}
-		}
-
-		//draw projectiles
-		for (unsigned int i = 0; i < allCircleProjectiles->size(); ++i)
-		{
-			window.draw((*allCircleProjectiles)[i]->ci);
-		}
-
 		//draw player
-		window.draw(sprite);
+		window.draw(*(player.getSprite()));
 
 		window.display();
 	}

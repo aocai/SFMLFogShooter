@@ -9,16 +9,18 @@ CircleProjectile::~CircleProjectile()
 {
 }
 
-void CircleProjectile::spawn(Vector2f p, Vector2f normal)
+void CircleProjectile::spawn(Vector2f p, Vector2f p2)
 {
 	CircleShape circ(5);
 	circ.setPosition(p);
+	circ.setFillColor(Color::Red);
 	ci = circ;
 	position = p;
-	velocity = Vector2f(5.0f * (normal / magnitude(normal)));
+	Vector2f v = p2 - p;
+	velocity = Vector2f(5.0f * (v / magnitude(v)));
 }
 
-void CircleProjectile::destroy()
+Shape* CircleProjectile::getProjectile()
 {
-
+	return &ci;
 }
