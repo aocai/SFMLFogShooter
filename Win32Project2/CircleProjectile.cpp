@@ -1,5 +1,4 @@
 #include "CircleProjectile.h"
-#include "main.h"
 
 CircleProjectile::CircleProjectile()
 {

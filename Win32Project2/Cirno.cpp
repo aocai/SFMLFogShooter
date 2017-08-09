@@ -1,47 +1,46 @@
-#include "SquareEnemy.h"
-#include "AStar.h"
+#include "Cirno.h"
 
-SquareEnemy::SquareEnemy()
+Cirno::Cirno()
 {
 }
 
-SquareEnemy::~SquareEnemy()
+Cirno::~Cirno()
 {
 }
 
-void SquareEnemy::spawn(Vector2f p)
+void Cirno::spawn(Vector2f p)
 {
-	sf::RectangleShape rectangle(p);
-	rectangle.setSize(Vector2f(32,40));
-	rectangle.setFillColor(Color::Red);
-	enemy = rectangle;
+	RectangleShape shape = RectangleShape();
+	cirno = shape;
+	cirno.setPosition(p);
+	cirno.setSize(Vector2f(32,40));
+	cirno.setFillColor(Color::Red);
 	velocity = Vector2f(0,0);
-	counter = 0;
+	counter = 4;
 }
 
-std::shared_ptr<Projectile> SquareEnemy::shoot(Vector2f playerPosition)
+std::shared_ptr<Projectile> Cirno::shoot(Vector2f playerPosition)
 {
 	std::shared_ptr<Projectile> cproj (new CircleProjectile);
-	cproj->spawn(enemy.getPosition(), playerPosition);
-	//allProjectiles->push_back(cproj);
+	cproj->spawn(cirno.getPosition(), playerPosition);
 	return cproj;
 }
 
-Shape* SquareEnemy::getEnemy()
+Shape* Cirno::getEnemy()
 {
-	return &enemy;
+	return &cirno;
 }
 
-void SquareEnemy::setSprite(Texture &texture)
+void Cirno::setSprite(Texture &texture)
 {
 	IntRect enemySpriteRect(192, 0, 32, 40);
 	sprite = Sprite(texture, enemySpriteRect);
-	sprite.setPosition(enemy.getPosition());
+	sprite.setPosition(cirno.getPosition());
 	currentSprite = 6;
 	prevDirection = -1;
 }
 
-void SquareEnemy::updateSpriteNumber(int i)
+void Cirno::updateSpriteNumber(int i)
 {
 	if (i != prevDirection)
 	{
@@ -77,7 +76,7 @@ void SquareEnemy::updateSpriteNumber(int i)
 	prevDirection = i;
 }
 
-void SquareEnemy::updateSprite()
+void Cirno::updateSprite()
 {
 	IntRect playerSpriteRect = IntRect(32 * (currentSprite % 8), 40 * (int)(currentSprite / 8), 32, 40);
 	if (currentSprite == 5)
@@ -101,18 +100,17 @@ void SquareEnemy::updateSprite()
 	sprite.setTextureRect(playerSpriteRect);
 }
 
-Sprite* SquareEnemy::getSprite()
+Sprite* Cirno::getSprite()
 {
 	return &sprite;
 }
 
-void SquareEnemy::enemyPathfinder(Vector2f g, std::vector<int> &workVector)
+void Cirno::enemyPathfinder(std::vector<double> &mapMatrix, Vector2f g, std::vector<int> &workVector)
 {
-	Vector2f v = enemy.getPosition();
+	Vector2f v = cirno.getPosition();
 	int start = (128 * (int)(v.y / 10)) + (int)(v.x / 10);
 	int goal = (128 * (int)(g.y / 10)) + (int)(g.x / 10);
-	//std::vector<int> result(128 * 72, 0);
-	bool success = AStar(*mapMatrix, start, goal, workVector);
+	bool success = AStar(mapMatrix, start, goal, workVector);
 
 	if (success)
 	{
@@ -122,7 +120,6 @@ void SquareEnemy::enemyPathfinder(Vector2f g, std::vector<int> &workVector)
 		}
 		while (start != goal)
 		{
-			//path.push(goal);
 			int temp = workVector[goal];
 			if (temp == goal - 1)
 			{
@@ -147,11 +144,11 @@ void SquareEnemy::enemyPathfinder(Vector2f g, std::vector<int> &workVector)
 	return;
 }
 
-void SquareEnemy::updateEnemy()
+void Cirno::updateEnemy()
 {
 	if (path.empty())
 		return;
-	if (counter % 4 == 0)
+	if (counter == 4)
 	{
 		int direction = path.top();
 		path.pop();
@@ -175,16 +172,17 @@ void SquareEnemy::updateEnemy()
 		v /= 4.0f;
 		velocity = v;
 		updateSpriteNumber(direction);
+		counter = 0;
 	}
 
-	enemy.move(velocity);
+	cirno.move(velocity);
 
-	sprite.setPosition(enemy.getPosition());
+	sprite.setPosition(cirno.getPosition());
 
 	++counter;
 }
 
-void SquareEnemy::clearStack()
+void Cirno::clearStack()
 {
 	while (!path.empty())
 		path.pop();

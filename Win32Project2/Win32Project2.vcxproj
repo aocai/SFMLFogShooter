@@ -152,13 +152,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AStar.cpp" />
+    <ClCompile Include="Aya.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="Projectile.cpp" />
     <ClCompile Include="CircleProjectile.cpp" />
-    <ClCompile Include="SquareEnemy.cpp" />
+    <ClCompile Include="Cirno.cpp" />
+    <ClCompile Include="Suika.cpp" />
+    <ClCompile Include="utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Aya.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="CircleProjectile.h" />
     <ClInclude Include="AStar.h" />
@@ -166,7 +171,9 @@
     <ClInclude Include="PriorityQueue.h" />
     <ClInclude Include="Projectile.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="SquareEnemy.h" />
+    <ClInclude Include="Cirno.h" />
+    <ClInclude Include="Suika.h" />
+    <ClInclude Include="utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

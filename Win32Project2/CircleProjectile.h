@@ -1,5 +1,6 @@
 #pragma once
 #include "Projectile.h"
+#include "utilities.h"
 
 class CircleProjectile
 	: public Projectile

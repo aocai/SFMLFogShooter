@@ -1,46 +1,9 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <stack>
-#include "SquareEnemy.h"
-#include "CircleProjectile.h"
-#include "Player.h"
 #include "main.h"
 
 using namespace sf;
-
-//RectangleShape player;
-std::vector<double> *mapMatrix = new std::vector<double>(128*72, 1);
-
-float determinant(Vector2f v1, Vector2f v2)
-{
-	return v1.x * v2.y - v2.x * v1.y;
-}
-
-float dotProduct(Vector2f v1, Vector2f v2)
-{
-	return v1.x * v2.x + v1.y * v2.y;
-}
-
-float magnitude(Vector2f v)
-{
-	return sqrt(v.x * v.x + v.y * v.y);
-}
-
-void updateMapMatrix(Vector2f topLeft, Vector2f bottomRight, int value)
-{
-	for (int i = topLeft.y / 10; i < bottomRight.y / 10; ++i)
-	{
-		for (int j = topLeft.x / 10; j < bottomRight.x / 10; ++j)
-		{
-			(*mapMatrix)[i*128 + j] = value;
-		}
-	}
-}
-
-Vector2f rotateVector2f(Vector2f v, double angle)
-{
-	return Vector2f(v.x * cos(angle) + v.y * (-sin(angle)), v.x * sin(angle) + v.y * cos(angle));
-}
 
 //Description: Clip 2D ray against 4 bounding planes of the screen
 //param: position = player position
@@ -61,7 +24,7 @@ int boundClipTest(Vector2f position, Vector2f Q, Vector2f &ret)
 	//1 = right plane
 	//2 = top plane
 	//3 = bottom plane
-	for (unsigned int boundary = 0; boundary < 4; ++boundary)
+	for (int boundary = 0; boundary < 4; ++boundary)
 	{
 		switch (boundary)
 		{
@@ -598,13 +561,13 @@ ConvexShape clipShadow(RectangleShape wall, Vector2f position)
 	int minPoint = 0;
 
 	//for each point in RectangleShape
-	for (unsigned int j = 0; j < 4; ++j)
+	for (int j = 0; j < 4; ++j)
 	{
 		int result = -1;
 
 		//for each other point in RectangleShape, check the determinant of vectors from position to the two points.
 		//if for a point, they are all greater than 0, then it is the maxPoint. If for a point, they are all lesser than 0, then it is the minPoint
-		for (unsigned int k = 0; k < 4; ++k)
+		for (int k = 0; k < 4; ++k)
 		{
 			//do not process the same point twice
 			if (k == j)
@@ -817,7 +780,7 @@ std::vector<ConvexShape> checkShadow(std::vector<RectangleShape> walls, Vector2f
 	std::vector<ConvexShape> fog;
 
 	//for each wall, create the shadow according to player position
-	for (unsigned int i = 0; i < walls.size(); ++i)
+	for (int i = 0; i < walls.size(); ++i)
 	{
 		ConvexShape shape = clipShadow(walls[i], position);
 		fog.push_back(shape);
@@ -825,44 +788,22 @@ std::vector<ConvexShape> checkShadow(std::vector<RectangleShape> walls, Vector2f
 	return fog;
 }
 
-/*
-void enemyPathfinder(Vector2f v, Vector2f g, stack<int> &enemyPath)
-{
-	int start = (128 * (int)(v.y / 10)) + (int)(v.x / 10);
-	int goal = (128 * (int)(g.y / 10)) + (int)(g.x / 10);
-	std::vector<int> result(128*72, 0);
-	bool success = AStar(*mapMatrix, start, goal, result);
-
-	if (success)
-	{
-		while (!enemyPath.empty())
-		{
-			enemyPath.pop();
-		}
-		while (start != goal)
-		{
-			enemyPath.push(goal);
-			goal = result[goal];
-		}
-	}
-	return;
-}
-*/
-
 int main()
 {
 	int windowWidth = 1280;
 	int windowHeight = 720;
+
+	std::vector<double> mapMatrix(128 * 72, 1);
 
 	ContextSettings settings;
 	settings.antialiasingLevel = 8;
 	RenderWindow window(VideoMode(windowWidth, windowHeight), "FogShooter", Style::Default, settings);
 	window.setFramerateLimit(60);
 
-	Clock clock;
+	//Clock clock;
 	Clock pathClock;
 	Clock spriteClock;
-	Clock attackClock;
+	//Clock attackClock;
 	Clock CirnoClock;
 
 	std::vector<RectangleShape> walls;
@@ -873,66 +814,76 @@ int main()
 	rect1.setPosition(Vector2f(120,110));
 	rect1.setFillColor(Color::Black);
 	walls.push_back(rect1);
-	updateMapMatrix(rect1.getPosition(), rect1.getPosition() + rect1.getSize(), -1);
+	updateMapMatrix(mapMatrix, rect1.getPosition(), rect1.getPosition() + rect1.getSize(), -1);
 
 	RectangleShape rect2;
 	rect2.setSize(Vector2f(80, 300));
 	rect2.setPosition(Vector2f(520, 250));
 	rect2.setFillColor(Color::Black);
 	walls.push_back(rect2);
-	updateMapMatrix(rect2.getPosition(), rect2.getPosition() + rect2.getSize(), -1);
+	updateMapMatrix(mapMatrix, rect2.getPosition(), rect2.getPosition() + rect2.getSize(), -1);
 
 	RectangleShape rect3;
 	rect3.setSize(Vector2f(60, 160));
 	rect3.setPosition(Vector2f(300, 50));
 	rect3.setFillColor(Color::Black);
 	walls.push_back(rect3);
-	updateMapMatrix(rect3.getPosition(), rect3.getPosition() + rect3.getSize(), -1);
+	updateMapMatrix(mapMatrix, rect3.getPosition(), rect3.getPosition() + rect3.getSize(), -1);
 
 	RectangleShape rect4;
 	rect4.setSize(Vector2f(250, 110));
 	rect4.setPosition(Vector2f(750, 600));
 	rect4.setFillColor(Color::Black);
 	walls.push_back(rect4);
-	updateMapMatrix(rect4.getPosition(), rect4.getPosition() + rect4.getSize(), -1);
+	updateMapMatrix(mapMatrix, rect4.getPosition(), rect4.getPosition() + rect4.getSize(), -1);
 
 	RectangleShape rect5;
 	rect5.setSize(Vector2f(220, 90));
 	rect5.setPosition(Vector2f(1000, 320));
 	rect5.setFillColor(Color::Black);
 	walls.push_back(rect5);
-	updateMapMatrix(rect5.getPosition(), rect5.getPosition() + rect5.getSize(), -1);
-
+	updateMapMatrix(mapMatrix, rect5.getPosition(), rect5.getPosition() + rect5.getSize(), -1);
 
 	std::vector<std::shared_ptr<Projectile>> allProjectiles;
 
-	Player player(Vector2f(32,40), Vector2f(windowWidth / 2, windowHeight / 2));
+	Player player(Vector2f(32,40), Vector2f(windowWidth / 2.f, windowHeight / 2.f));
 
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
 	std::vector<std::shared_ptr<Enemy>> enemyVector;
 
-	//spawn enemy (TESTING)
-	std::shared_ptr<Enemy> s(new SquareEnemy);
-	s->spawn(Vector2f(20, 20));
+	//spawn Cirno
+	std::shared_ptr<Enemy> cirno(new Cirno);
+	cirno->spawn(Vector2f(20, 20));
 	Texture Cirno;
-	Cirno.loadFromFile("Cirno.png");
-	s->setSprite(Cirno);
+	Cirno.loadFromFile("sprites\\Cirno.png");
+	cirno->setSprite(Cirno);
+	enemyVector.push_back(cirno);
 
-	enemyVector.push_back(s);
+	//Spawn Aya
+	std::shared_ptr<Enemy> aya(new Aya);
+	aya->spawn(Vector2f(1000, 20));
+	Texture Aya;
+	Aya.loadFromFile("sprites\\Aya Shameimaru.png");
+	aya->setSprite(Aya);
+	enemyVector.push_back(aya);
 
-	//stack<int> enemyPath;
+	//Spawn Suika
+	std::shared_ptr<Enemy> suika(new Suika);
+	suika->spawn(Vector2f(500, 450));
+	Texture Suika;
+	Suika.loadFromFile("sprites\\Suika Ibuki.png");
+	suika->setSprite(Suika);
+	enemyVector.push_back(suika);
+
 	std::vector<int> workVector(128 * 72, 0);
-	s->enemyPathfinder(player.getPosition(), workVector);
-	//enemyPathfinder(s.getEnemy()->getPosition(), player.getPosition(), enemyPath);
-	Vector2f CirnoTarget = s->getEnemy()->getPosition();
 
 	Texture Flandre;
-	Flandre.loadFromFile("Flandre Scarlet.png");
+	Flandre.loadFromFile("sprites\\Flandre Scarlet.png");
 	player.setSprite(Flandre);
 	
 	std::vector<int> dirtyWalls(walls.size(), 0);
-	unsigned int currentWall = walls.size();
+	size_t currentWall = walls.size();
 	float deltaX;
 	float deltaY;
 
@@ -950,7 +901,7 @@ int main()
 		{
 			if (currentWall == walls.size())
 			{
-				for (unsigned int i = 0; i < walls.size(); ++i)
+				for (size_t i = 0; i < walls.size(); ++i)
 				{
 					if (walls[i].getGlobalBounds().contains(window.mapPixelToCoords(Mouse::getPosition(window))))
 					{
@@ -979,7 +930,7 @@ int main()
 			//free current wall in mapMatrix if not already done so
 			if (dirtyWalls[currentWall] == 0)
 			{
-				updateMapMatrix(walls[currentWall].getPosition(), walls[currentWall].getPosition() + wallSize, 1);
+				updateMapMatrix(mapMatrix, walls[currentWall].getPosition(), walls[currentWall].getPosition() + wallSize, 1);
 			}
 			
 			//move wall to new mouse position
@@ -1006,9 +957,9 @@ int main()
 		if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
 		{
 			player.getPlayer()->move(Vector2f(-3.0f, 0));
-			for (unsigned int i = 0; i < walls.size(); ++i)
+			for (const auto &w : walls)
 			{
-				while (walls[i].getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				while (w.getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
 					player.getPlayer()->move(Vector2f(1.0f, 0));
 				}
@@ -1024,9 +975,9 @@ int main()
 		if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
 		{
 			player.getPlayer()->move(Vector2f(3.0f, 0));
-			for (unsigned int i = 0; i < walls.size(); ++i)
+			for (const auto &w : walls)
 			{
-				while (walls[i].getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				while (w.getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
 					player.getPlayer()->move(Vector2f(-1.0f, 0));
 				}
@@ -1042,9 +993,9 @@ int main()
 		if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
 		{
 			player.getPlayer()->move(Vector2f(0, -3.0f));
-			for (unsigned int i = 0; i < walls.size(); ++i)
+			for (const auto &w : walls)
 			{
-				while (walls[i].getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				while (w.getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
 					player.getPlayer()->move(Vector2f(0, 1.0f));
 				}
@@ -1063,9 +1014,9 @@ int main()
 		if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
 		{
 			player.getPlayer()->move(Vector2f(0, 3.0f));
-			for (unsigned int i = 0; i < walls.size(); ++i)
+			for (const auto &w : walls)
 			{
-				while (walls[i].getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				while (w.getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
 					player.getPlayer()->move(Vector2f(0, -1.0f));
 				}
@@ -1119,7 +1070,6 @@ int main()
 		}
 
 		//get the left and right vectors of the player view area (left and right LOS arms) by rotating vector PQ by 15 degrees
-
 		Vector2f rightArm = rotateVector2f(PQ, 15) * 100.0f;
 		Vector2f leftArm = rotateVector2f(PQ, -15) * 100.0f;
 
@@ -1137,118 +1087,56 @@ int main()
 		if (elapsed.asSeconds() > 1)
 		{
 			//check if walls are moved and update mapMatrix accordingly
-			for (int i = 0; i < dirtyWalls.size(); ++i)
+			for (size_t i = 0; i < dirtyWalls.size(); ++i)
 			{
 				if (dirtyWalls[i] == 1)
 				{
-					updateMapMatrix(walls[i].getPosition(), walls[i].getPosition() + walls[i].getSize(), -1);
+					updateMapMatrix(mapMatrix, walls[i].getPosition(), walls[i].getPosition() + walls[i].getSize(), -1);
 					dirtyWalls[i] = 0;
 				}
 			}
-			for (int i = 0; i < enemyVector.size(); ++i)
+			for (const auto &e : enemyVector)
 			{
-				if (!enemyVector[i]->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				if (!e->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 				{
-					enemyVector[i]->enemyPathfinder(player.getPosition(), workVector);
+					e->enemyPathfinder(mapMatrix, player.getPosition(), workVector);
 				}
-			}
-			//s->enemyPathfinder(player.getPosition(), workVector);
-			//enemyPathfinder(s.getEnemy()->getPosition(), player.getPosition(), enemyPath);
-			pathClock.restart();
 
-			//TODO: fire projectile only if in range and no obstacles
-			allProjectiles.push_back(s->shoot(playerPosition)); //fire a projectile
+				//TODO: fire projectile only if in range and no obstacles
+				allProjectiles.push_back(e->shoot(playerPosition)); //fire a projectile
+			}
+			pathClock.restart();
 		}
 
 		//do everything
-		for (int i = 0; i < enemyVector.size(); ++i)
+		for (const auto &e : enemyVector)
 		{
-			enemyVector[i]->updateEnemy();
-			if (enemyVector[i]->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+			e->updateEnemy();
+			if (e->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 			{
 				//reached
-				enemyVector[i]->clearStack();
+				e->clearStack();
 			}
 		}
 
-		/*
-		if (magnitude(CirnoTarget - s->getEnemy()->getPosition()) < 3)
-		{
-			if (!s->path.empty())
-			{
-				int index = s->path.top();
-				s->path.pop();
-				int x = index % 128;
-				int y = index / 128;
-				CirnoTarget = Vector2f(10 * x, 10 * y);
-			}
-		}
-
-		if (magnitude(s->getEnemy()->getPosition() - player.getPosition()) > 5 && !s->path.empty())
-		{
-			//interpolate Cirno to target position
-			Vector2f unitV = CirnoTarget - s->getEnemy()->getPosition();
-			unitV = unitV / magnitude(unitV);
-			unitV *= 3.f;
-
-			int awsd = 0;
-			float maxf = 0;
-			if (abs(unitV.x) > maxf)
-			{
-				maxf = abs(unitV.x);
-				awsd = unitV.x < 0 ? 0 : 1;
-			}
-			if (abs(unitV.y) > maxf)
-			{
-				maxf = abs(unitV.y);
-				awsd = unitV.y < 0 ? 2 : 3;
-			}
-
-			s->getEnemy()->move(unitV);
-
-			while (s->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
-			{
-				s->getEnemy()->move(unitV / -3.f);
-			}
-
-			s->getSprite()->setPosition(s->getEnemy()->getPosition());
-
-			s->updateSpriteNumber(awsd);
-		}
-		else
-		{
-			while (!s->path.empty())
-				s->path.pop();
-		}
-		*/
-		
 		Time elapsed_1 = CirnoClock.getElapsedTime();
 		if (elapsed_1.asSeconds() > 0.1)
 		{
-			s->updateSprite();
+			for (const auto &e : enemyVector)
+			{
+				e->updateSprite();
+			}
 			CirnoClock.restart();
 		}
 
-		/*
-		//move enemy
-		Time elapsed_1 = clock.getElapsedTime();
-		if (elapsed_1.asSeconds() > 0.1 && !enemyPath.empty())
-		{
-			int index = enemyPath.top();
-			enemyPath.pop();
-			int x = index % 128;
-			int y = index / 128;
-			Vector2f newPosition = Vector2f(10 * x, 10 * y);
-			s.getEnemy()->setPosition(newPosition);
-			clock.restart();
-		}
-		*/
-
 		//draw enemy
-		window.draw(*(s->getSprite()));
+		for (const auto &e : enemyVector)
+		{
+			window.draw(*(e->getSprite()));
+		}
 
 		//update projectile
-		for (unsigned int i = 0; i < allProjectiles.size(); ++i)
+		for (size_t i = 0; i < allProjectiles.size(); ++i)
 		{
 			allProjectiles[i]->position += allProjectiles[i]->velocity;
 			//check for bounds
@@ -1256,6 +1144,7 @@ int main()
 				allProjectiles[i]->position.y < 0 || allProjectiles[i]->position.y > 720)
 			{
 				allProjectiles.erase(allProjectiles.begin() + i);
+				--i;
 			}
 			else
 			{
@@ -1264,27 +1153,27 @@ int main()
 		}
 
 		//draw projectiles
-		for (unsigned int i = 0; i < allProjectiles.size(); ++i)
+		for (const auto &p : allProjectiles)
 		{
-			window.draw(*(allProjectiles[i]->getProjectile()));
+			window.draw(*(p->getProjectile()));
 		}
 
 		//draw shadow first
-		for (unsigned int i = 0; i < shadow.size(); ++i)
+		for (const auto &s : shadow)
 		{
-			window.draw(shadow[i]);
+			window.draw(s);
 		}
 
 		//draw player view area by drawing the opposite
-		for (unsigned int i = 0; i < los.size(); ++i)
+		for (const auto &l : los)
 		{
-			window.draw(los[i]);
+			window.draw(l);
 		}
 
 		//draw walls
-		for (unsigned int i = 0; i < walls.size(); ++i)
+		for (const auto &w : walls)
 		{
-			window.draw(walls[i]);
+			window.draw(w);
 		}
 
 		//draw player
