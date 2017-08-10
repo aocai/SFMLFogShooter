@@ -1,22 +1,20 @@
 #include "Aya.h"
 
-Aya::Aya()
+Aya::Aya(Vector2f p)
 {
+	aya = RectangleShape(Vector2f(32,40));
+	aya.setPosition(p);
+	aya.setFillColor(Color::Red);
+	collisionBox = RectangleShape(Vector2f(64, 80));
+	collisionBox.setOrigin(Vector2f(16, 20));
+	collisionBox.setPosition(aya.getPosition());
+	velocity = Vector2f(0, 0);
+	counter = 4;
+	moveState = 0;
 }
 
 Aya::~Aya()
 {
-}
-
-void Aya::spawn(Vector2f p)
-{
-	RectangleShape shape = RectangleShape();
-	aya = shape;
-	aya.setPosition(p);
-	aya.setSize(Vector2f(32, 40));
-	aya.setFillColor(Color::Red);
-	velocity = Vector2f(0, 0);
-	counter = 4;
 }
 
 std::shared_ptr<Projectile> Aya::shoot(Vector2f playerPosition)
@@ -140,12 +138,14 @@ void Aya::enemyPathfinder(std::vector<double> &mapMatrix, Vector2f g, std::vecto
 			}
 			goal = temp;
 		}
+		counter = 4;
+		moveState = 0;
 	}
 	fill(workVector.begin(), workVector.end(), 0);
 	return;
 }
 
-void Aya::updateEnemy()
+void Aya::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 {
 	if (path.empty())
 		return;
@@ -178,13 +178,54 @@ void Aya::updateEnemy()
 
 	aya.move(velocity);
 
-	sprite.setPosition(aya.getPosition());
+	moveState = 0;
+	for (const auto &e : enemyVector)
+	{
+		if (this == e.get())
+			continue;
+		if (e->getMoveState() == 1)
+		{
+		}
+		else if (e->getMoveState() == 2)
+		{
+			if (aya.getGlobalBounds().intersects(e->getEnemy()->getGlobalBounds()))
+			{
+				moveState = 2;
+				break;
+			}
+		}
+		else if (aya.getGlobalBounds().intersects(e->getEnemy()->getGlobalBounds()))
+		{
+			moveState = 1;
+			break;
+		}
+	}
 
-	++counter;
+	if (moveState == 0)
+	{
+		sprite.setPosition(aya.getPosition());
+		collisionBox.move(velocity);
+		++counter;
+	}
+	else
+	{
+		aya.move(-velocity);
+	}
 }
 
 void Aya::clearStack()
 {
 	while (!path.empty())
 		path.pop();
+	moveState = 2;
+}
+
+RectangleShape* Aya::getCollisionBox()
+{
+	return &collisionBox;
+}
+
+int Aya::getMoveState()
+{
+	return moveState;
 }

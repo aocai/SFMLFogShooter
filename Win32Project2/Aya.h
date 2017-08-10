@@ -11,6 +11,8 @@ class Aya :
 private:
 	RectangleShape aya;
 	Sprite sprite;
+	RectangleShape collisionBox;
+	int moveState;
 
 	int prevDirection;
 	int currentSprite;
@@ -20,7 +22,6 @@ private:
 
 	std::stack<int> path;
 public:
-	void spawn(Vector2f);
 	std::shared_ptr<Projectile> shoot(Vector2f);
 	Shape* getEnemy();
 	void setSprite(Texture&);
@@ -28,8 +29,10 @@ public:
 	void updateSprite();
 	Sprite* getSprite();
 	void enemyPathfinder(std::vector<double>&, Vector2f, std::vector<int>&);
-	void updateEnemy();
+	void updateEnemy(std::vector<std::shared_ptr<Enemy>>&);
 	void clearStack();
-	Aya();
+	RectangleShape* getCollisionBox();
+	int getMoveState();
+	Aya(Vector2f);
 	~Aya();
 };

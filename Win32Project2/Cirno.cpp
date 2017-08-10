@@ -1,22 +1,20 @@
 #include "Cirno.h"
 
-Cirno::Cirno()
+Cirno::Cirno(Vector2f p)
 {
+	cirno = RectangleShape(Vector2f(32, 40));
+	cirno.setPosition(p);
+	cirno.setFillColor(Color::Red);
+	collisionBox = RectangleShape(Vector2f(64, 80));
+	collisionBox.setOrigin(Vector2f(16, 20));
+	collisionBox.setPosition(cirno.getPosition());
+	velocity = Vector2f(0, 0);
+	counter = 4;
+	moveState = 0;
 }
 
 Cirno::~Cirno()
 {
-}
-
-void Cirno::spawn(Vector2f p)
-{
-	RectangleShape shape = RectangleShape();
-	cirno = shape;
-	cirno.setPosition(p);
-	cirno.setSize(Vector2f(32,40));
-	cirno.setFillColor(Color::Red);
-	velocity = Vector2f(0,0);
-	counter = 4;
 }
 
 std::shared_ptr<Projectile> Cirno::shoot(Vector2f playerPosition)
@@ -139,12 +137,14 @@ void Cirno::enemyPathfinder(std::vector<double> &mapMatrix, Vector2f g, std::vec
 			}
 			goal = temp;
 		}
+		counter = 4;
+		moveState = 0;
 	}
 	fill(workVector.begin(), workVector.end(), 0);
 	return;
 }
 
-void Cirno::updateEnemy()
+void Cirno::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 {
 	if (path.empty())
 		return;
@@ -177,13 +177,54 @@ void Cirno::updateEnemy()
 
 	cirno.move(velocity);
 
-	sprite.setPosition(cirno.getPosition());
+	moveState = 0;
+	for (const auto &e : enemyVector)
+	{
+		if (this == e.get())
+			continue;
+		if (e->getMoveState() == 1)
+		{
+		}
+		else if (e->getMoveState() == 2)
+		{
+			if (cirno.getGlobalBounds().intersects(e->getEnemy()->getGlobalBounds()))
+			{
+				moveState = 2;
+				break;
+			}
+		}
+		else if (cirno.getGlobalBounds().intersects(e->getEnemy()->getGlobalBounds()))
+		{
+			moveState = 1;
+			break;
+		}
+	}
 
-	++counter;
+	if (moveState == 0)
+	{
+		sprite.setPosition(cirno.getPosition());
+		collisionBox.move(velocity);
+		++counter;
+	}
+	else
+	{
+		cirno.move(-velocity);
+	}
 }
 
 void Cirno::clearStack()
 {
 	while (!path.empty())
 		path.pop();
+	moveState = 2;
+}
+
+RectangleShape* Cirno::getCollisionBox()
+{
+	return &collisionBox;
+}
+
+int Cirno::getMoveState()
+{
+	return moveState;
 }

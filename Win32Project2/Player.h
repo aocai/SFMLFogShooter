@@ -1,5 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "Projectile.h"
+#include "CircleProjectile.h"
 
 using namespace sf;
 
@@ -140,5 +142,12 @@ public:
 	Sprite* getSprite()
 	{
 		return &sprite;
+	}
+
+	std::shared_ptr<Projectile> shoot(Vector2f p)
+	{
+		std::shared_ptr<Projectile> cproj(new CircleProjectile);
+		cproj->spawn(playerBox.getPosition() + playerBox.getSize()/2.f, p);
+		return cproj;
 	}
 };

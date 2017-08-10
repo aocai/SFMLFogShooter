@@ -800,11 +800,12 @@ int main()
 	RenderWindow window(VideoMode(windowWidth, windowHeight), "FogShooter", Style::Default, settings);
 	window.setFramerateLimit(60);
 
-	//Clock clock;
-	Clock pathClock;
-	Clock spriteClock;
-	//Clock attackClock;
-	Clock CirnoClock;
+	Clock clock;
+	
+	float pathTime = clock.getElapsedTime().asSeconds();
+	float playerTime = clock.getElapsedTime().asSeconds();
+	float playerAttackTime = clock.getElapsedTime().asSeconds();
+	float enemyTime = clock.getElapsedTime().asSeconds();
 
 	std::vector<RectangleShape> walls;
 
@@ -853,24 +854,21 @@ int main()
 	std::vector<std::shared_ptr<Enemy>> enemyVector;
 
 	//spawn Cirno
-	std::shared_ptr<Enemy> cirno(new Cirno);
-	cirno->spawn(Vector2f(20, 20));
+	std::shared_ptr<Enemy> cirno(new Cirno(Vector2f(20, 20)));
 	Texture Cirno;
 	Cirno.loadFromFile("sprites\\Cirno.png");
 	cirno->setSprite(Cirno);
 	enemyVector.push_back(cirno);
 
 	//Spawn Aya
-	std::shared_ptr<Enemy> aya(new Aya);
-	aya->spawn(Vector2f(1000, 20));
+	std::shared_ptr<Enemy> aya(new Aya(Vector2f(1000, 20)));
 	Texture Aya;
 	Aya.loadFromFile("sprites\\Aya Shameimaru.png");
 	aya->setSprite(Aya);
 	enemyVector.push_back(aya);
 
 	//Spawn Suika
-	std::shared_ptr<Enemy> suika(new Suika);
-	suika->spawn(Vector2f(500, 450));
+	std::shared_ptr<Enemy> suika(new Suika(Vector2f(500, 450)));
 	Texture Suika;
 	Suika.loadFromFile("sprites\\Suika Ibuki.png");
 	suika->setSprite(Suika);
@@ -1036,14 +1034,19 @@ int main()
 		//check for attack input
 		if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Numpad0))
 		{
-			player.updateSpriteNumber(4);
+			if (clock.getElapsedTime().asSeconds() - playerAttackTime > 1.f)
+			{
+				player.updateSpriteNumber(4);
+				allProjectiles.push_back(player.shoot(window.mapPixelToCoords(Mouse::getPosition(window))));
+				playerAttackTime = clock.getElapsedTime().asSeconds();
+			}
 		}
 
 		//set player move sprites
-		if (spriteClock.getElapsedTime().asSeconds() > 0.10)
+		if (clock.getElapsedTime().asSeconds() - playerTime > 0.10)
 		{
 			player.updateSprite();
-			spriteClock.restart();
+			playerTime = clock.getElapsedTime().asSeconds();
 		}
 
 		//current mouse coordinates
@@ -1056,25 +1059,22 @@ int main()
 		//get vector from player position to mouse position
 		if (playerPosition == mouseCoord)
 		{
-			PQ = playerPosition - lastMousePosition;
+			mouseCoord = lastMousePosition;
 		}
-		else
+		PQ = playerPosition - lastMousePosition;
+		if (magnitude(PQ) < 50)
 		{
-			PQ = playerPosition - mouseCoord;
-			if (magnitude(PQ) < 30)
-			{
-				//mouse position too close to player position. project mouse position onto surface of circle
-				PQ = (PQ / magnitude(PQ)) * 30.f;
-			}
-			lastMousePosition = mouseCoord;
+			//mouse position too close to player position. project mouse position onto surface of circle
+			PQ = (PQ / magnitude(PQ)) * 50.f;
 		}
+		lastMousePosition = mouseCoord;
 
 		//get the left and right vectors of the player view area (left and right LOS arms) by rotating vector PQ by 15 degrees
 		Vector2f rightArm = rotateVector2f(PQ, 15) * 100.0f;
 		Vector2f leftArm = rotateVector2f(PQ, -15) * 100.0f;
 
 		//get los ConvexShapes
-		std::vector<ConvexShape> los = clipLOS(playerPosition, mouseCoord, leftArm, rightArm);
+		std::vector<ConvexShape> los = clipLOS(playerPosition, lastMousePosition, leftArm, rightArm);
 
 		//check shadow ConvexShapes
 		std::vector<ConvexShape> shadow = checkShadow(walls, playerPosition);
@@ -1083,8 +1083,7 @@ int main()
 		window.clear(Color::White);
 
 		//pathfinding
-		Time elapsed = pathClock.getElapsedTime();
-		if (elapsed.asSeconds() > 1)
+		if (clock.getElapsedTime().asSeconds() - pathTime > 1)
 		{
 			//check if walls are moved and update mapMatrix accordingly
 			for (size_t i = 0; i < dirtyWalls.size(); ++i)
@@ -1105,13 +1104,13 @@ int main()
 				//TODO: fire projectile only if in range and no obstacles
 				allProjectiles.push_back(e->shoot(playerPosition)); //fire a projectile
 			}
-			pathClock.restart();
+			pathTime = clock.getElapsedTime().asSeconds();
 		}
 
 		//do everything
 		for (const auto &e : enemyVector)
 		{
-			e->updateEnemy();
+			e->updateEnemy(enemyVector);
 			if (e->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
 			{
 				//reached
@@ -1119,14 +1118,13 @@ int main()
 			}
 		}
 
-		Time elapsed_1 = CirnoClock.getElapsedTime();
-		if (elapsed_1.asSeconds() > 0.1)
+		if (clock.getElapsedTime().asSeconds() - enemyTime > 0.1)
 		{
 			for (const auto &e : enemyVector)
 			{
 				e->updateSprite();
 			}
-			CirnoClock.restart();
+			enemyTime = clock.getElapsedTime().asSeconds();
 		}
 
 		//draw enemy

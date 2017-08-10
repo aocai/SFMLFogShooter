@@ -1,22 +1,20 @@
 #include "Suika.h"
 
-Suika::Suika()
+Suika::Suika(Vector2f p)
 {
+	suika = RectangleShape(Vector2f(32, 40));
+	suika.setPosition(p);
+	suika.setFillColor(Color::Red);
+	collisionBox = RectangleShape(Vector2f(64, 80));
+	collisionBox.setOrigin(Vector2f(16, 20));
+	collisionBox.setPosition(suika.getPosition());
+	velocity = Vector2f(0, 0);
+	counter = 4;
+	moveState = 0;
 }
 
 Suika::~Suika()
 {
-}
-
-void Suika::spawn(Vector2f p)
-{
-	RectangleShape shape = RectangleShape();
-	suika = shape;
-	suika.setPosition(p);
-	suika.setSize(Vector2f(32, 40));
-	suika.setFillColor(Color::Red);
-	velocity = Vector2f(0, 0);
-	counter = 4;
 }
 
 std::shared_ptr<Projectile> Suika::shoot(Vector2f playerPosition)
@@ -140,12 +138,14 @@ void Suika::enemyPathfinder(std::vector<double> &mapMatrix, Vector2f g, std::vec
 			}
 			goal = temp;
 		}
+		counter = 4;
+		moveState = 0;
 	}
 	fill(workVector.begin(), workVector.end(), 0);
 	return;
 }
 
-void Suika::updateEnemy()
+void Suika::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 {
 	if (path.empty())
 		return;
@@ -178,13 +178,54 @@ void Suika::updateEnemy()
 
 	suika.move(velocity);
 
-	sprite.setPosition(suika.getPosition());
+	moveState = 0;
+	for (const auto &e : enemyVector)
+	{
+		if (this == e.get())
+			continue;
+		if (e->getMoveState() == 1)
+		{
+		}
+		else if (e->getMoveState() == 2)
+		{
+			if (suika.getGlobalBounds().intersects(e->getEnemy()->getGlobalBounds()))
+			{
+				moveState = 2;
+				break;
+			}
+		}
+		else if (suika.getGlobalBounds().intersects(e->getEnemy()->getGlobalBounds()))
+		{
+			moveState = 1;
+			break;
+		}
+	}
 
-	++counter;
+	if (moveState == 0)
+	{
+		sprite.setPosition(suika.getPosition());
+		collisionBox.move(velocity);
+		++counter;
+	}
+	else
+	{
+		suika.move(-velocity);
+	}
 }
 
 void Suika::clearStack()
 {
 	while (!path.empty())
 		path.pop();
+	moveState = 2;
+}
+
+RectangleShape* Suika::getCollisionBox()
+{
+	return &collisionBox;
+}
+
+int Suika::getMoveState()
+{
+	return moveState;
 }
