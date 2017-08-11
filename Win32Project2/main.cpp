@@ -804,7 +804,7 @@ int main()
 	
 	float pathTime = clock.getElapsedTime().asSeconds();
 	float playerTime = clock.getElapsedTime().asSeconds();
-	float playerAttackTime = clock.getElapsedTime().asSeconds();
+	float playerAttackTime = -1.f;
 	float enemyTime = clock.getElapsedTime().asSeconds();
 
 	std::vector<RectangleShape> walls;
@@ -878,7 +878,11 @@ int main()
 
 	Texture Flandre;
 	Flandre.loadFromFile("sprites\\Flandre Scarlet.png");
-	player.setSprite(Flandre);
+
+	player.setMoveAnimation(Flandre, 0.1f);
+	player.setAttackAnimation(Flandre, 0.15f);
+	player.getSprite()->setPosition(player.getPosition());
+	//player.setCurrentAnimation(3);
 	
 	std::vector<int> dirtyWalls(walls.size(), 0);
 	size_t currentWall = walls.size();
@@ -967,8 +971,7 @@ int main()
 				player.getPlayer()->move(Vector2f(-player.getPosition().x, 0));
 			}
 
-			player.updateSpriteNumber(0);
-			player.getSprite()->setPosition(player.getPosition());
+			player.setCurrentAnimation(0);
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
 		{
@@ -985,8 +988,7 @@ int main()
 				player.getPlayer()->move(Vector2f(1280 - (player.getPlayer()->getSize().x + player.getPlayer()->getPosition().x), 0));
 			}
 
-			player.updateSpriteNumber(1);
-			player.getSprite()->setPosition(player.getPosition());
+			player.setCurrentAnimation(1);
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
 		{
@@ -1005,9 +1007,8 @@ int main()
 
 			if (!(Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D)))
 			{
-				player.updateSpriteNumber(2);
+				player.setCurrentAnimation(2);
 			}
-			player.getSprite()->setPosition(player.getPosition());
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
 		{
@@ -1026,9 +1027,8 @@ int main()
 
 			if (!(Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D)))
 			{
-				player.updateSpriteNumber(3);
+				player.setCurrentAnimation(3);
 			}
-			player.getSprite()->setPosition(player.getPosition());
 		}
 
 		//check for attack input
@@ -1036,18 +1036,37 @@ int main()
 		{
 			if (clock.getElapsedTime().asSeconds() - playerAttackTime > 1.f)
 			{
-				player.updateSpriteNumber(4);
-				allProjectiles.push_back(player.shoot(window.mapPixelToCoords(Mouse::getPosition(window))));
+				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
+				Vector2f v = mouseV - (player.getPosition() + player.getPlayer()->getSize()/2.f);
+				if (abs(v.y) > abs(v.x))
+				{
+					if (v.y < 0)
+					{
+						player.setCurrentAnimation(6);
+					}
+					else
+					{
+						player.setCurrentAnimation(7);
+					}
+				}
+				else
+				{
+					if (v.x < 0)
+					{
+						player.setCurrentAnimation(4);
+					}
+					else
+					{
+						player.setCurrentAnimation(5);
+					}
+				}
+				player.updateTarget(mouseV);
 				playerAttackTime = clock.getElapsedTime().asSeconds();
 			}
 		}
 
-		//set player move sprites
-		if (clock.getElapsedTime().asSeconds() - playerTime > 0.10)
-		{
-			player.updateSprite();
-			playerTime = clock.getElapsedTime().asSeconds();
-		}
+		player.updateAnimation();
+		player.updateSpritePosition();
 
 		//current mouse coordinates
 		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
@@ -1152,6 +1171,31 @@ int main()
 
 		//draw projectiles
 		for (const auto &p : allProjectiles)
+		{
+			window.draw(*(p->getProjectile()));
+		}
+
+		std::vector<std::shared_ptr<Projectile>> *playerProjectiles = player.getPlayerProjectiles();
+
+		//update player projectile
+		for (size_t i = 0; i < playerProjectiles->size(); ++i)
+		{
+			(*playerProjectiles)[i]->position += (*playerProjectiles)[i]->velocity;
+			//check for bounds
+			if ((*playerProjectiles)[i]->position.x < 0 || (*playerProjectiles)[i]->position.x > 1280 ||
+				(*playerProjectiles)[i]->position.y < 0 || (*playerProjectiles)[i]->position.y > 720)
+			{
+				(*playerProjectiles).erase((*playerProjectiles).begin() + i);
+				--i;
+			}
+			else
+			{
+				(*playerProjectiles)[i]->getProjectile()->move((*playerProjectiles)[i]->velocity);
+			}
+		}
+
+		//draw playerProjectiles
+		for (const auto &p : *playerProjectiles)
 		{
 			window.draw(*(p->getProjectile()));
 		}

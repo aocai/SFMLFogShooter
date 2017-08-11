@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include "Projectile.h"
 #include "CircleProjectile.h"
+#include "Animation.h"
 
 using namespace sf;
 
@@ -10,22 +11,112 @@ class Player
 private:
 	//Vector2f position;
 	RectangleShape playerBox;
-	Sprite sprite;
+	int currentAni;
+	Animation* currentAnimation;
+	Animation left;
+	Animation right;
+	Animation up;
+	Animation down;
+	Animation leftAttack;
+	Animation rightAttack;
+	Animation upAttack;
+	Animation downAttack;
 
-	int currentSprite;
-	int attackSprite;
+	Vector2f target;
 	int hp;
+
+	std::vector<std::shared_ptr<Projectile>> playerProjectiles;
 public:
 	Player(Vector2f &size, Vector2f &pos)
 	{
 		//position = pos + Vector2f(size.x/2, size.y/2);
 		playerBox.setSize(size);
 		playerBox.setPosition(pos);
+		currentAnimation = &down;
+		currentAni = 3;
 	}
 
 	~Player()
 	{
 
+	}
+
+	void setMoveAnimation(Texture &t, float speed)
+	{
+		left = Animation(t, 128, 40, 6, 32, 40, speed);
+		right = Animation(t, 64, 80, 6, 32, 40, speed);
+		up = Animation(t, 0, 0, 6, 32, 40, speed);
+		down = Animation(t, 192, 0, 6, 32, 40, speed);
+	}
+
+	void setAttackAnimation(Texture &t, float speed)
+	{
+		leftAttack = Animation(t, 64, 280, 5, 32, 40, speed);
+		rightAttack = Animation(t, 224, 280, 5, 32, 40, speed);
+		upAttack = Animation(t, 0, 240, 5, 32, 40, speed);
+		downAttack = Animation(t, 160, 240, 5, 32, 40, speed);
+	}
+
+	void setCurrentAnimation(int i)
+	{
+		if (i == 0 && i != currentAni)
+		{
+			currentAnimation->resetFrame();
+			currentAnimation = &left;
+			currentAni = 0;
+		}
+		else if (i == 1 && i != currentAni)
+		{
+			currentAnimation->resetFrame();
+			currentAnimation = &right;
+			currentAni = 1;
+		}
+		else if (i == 2 && i != currentAni)
+		{
+			currentAnimation->resetFrame();
+			currentAnimation = &up;
+			currentAni = 2;
+		}
+		else if (i == 3 && i != currentAni)
+		{
+			currentAnimation->resetFrame();
+			currentAnimation = &down;
+			currentAni = 3;
+		}
+		else if (i == 4 && i != currentAni)
+		{
+			currentAnimation->resetFrame();
+			currentAnimation = &leftAttack;
+			currentAni = 4;
+		}
+		else if (i == 5 && i != currentAni)
+		{
+			currentAnimation->resetFrame();
+			currentAnimation = &rightAttack;
+			currentAni = 5;
+		}
+		else if (i == 6 && i != currentAni)
+		{
+			currentAnimation->resetFrame();
+			currentAnimation = &upAttack;
+			currentAni = 6;
+		}
+		else if (i == 7 && i != currentAni)
+		{
+			currentAnimation->resetFrame();
+			currentAnimation = &downAttack;
+			currentAni = 7;
+		}
+	}
+
+	void updateAnimation()
+	{
+		currentAnimation->update();
+		if (currentAni >= 4 && currentAnimation->isOver())
+		{
+			playerProjectiles.push_back(shoot(target));
+			setCurrentAnimation(currentAni - 4);
+		}
 	}
 
 	Vector2f getPosition()
@@ -38,116 +129,30 @@ public:
 		return &playerBox;
 	}
 
-	void setSprite(Texture &texture)
-	{
-		IntRect playerSpriteRect(192, 0, 32, 40);
-		sprite = Sprite(texture, playerSpriteRect);
-		sprite.setPosition(playerBox.getPosition());
-		currentSprite = 6;
-		attackSprite = -1;
-		hp = 100;
-	}
-
-	void updateSpriteNumber(int i)
-	{
-		if (i == 0) //left
-		{
-			if ((currentSprite < 12 || currentSprite >= 18))
-			{
-				currentSprite = 12;
-			}
-		}
-		else if (i == 1) //right
-		{
-			if ((currentSprite < 18 || currentSprite >= 24))
-			{
-				currentSprite = 18;
-			}
-		}
-		else if (i == 2) //up
-		{
-			if (currentSprite >= 6)
-			{
-				currentSprite = 0;
-			}
-		}
-		else if (i == 3) //down
-		{
-			if ((currentSprite < 6 || currentSprite >= 12))
-			{
-				currentSprite = 6;
-			}
-		}
-		else if (i == 4) //attack
-		{
-			if (currentSprite < 6)
-			{
-				attackSprite = 48;
-			}
-			else if (currentSprite < 12)
-			{
-				attackSprite = 53;
-			}
-			else if (currentSprite < 18)
-			{
-				attackSprite = 58;
-			}
-			else if (currentSprite < 24)
-			{
-				attackSprite = 63;
-			}
-		}
-	}
-
-	void updateSprite()
-	{
-		if (attackSprite == -1)
-		{
-			IntRect playerSpriteRect = IntRect(32 * (currentSprite % 8), 40 * (int)(currentSprite / 8), 32, 40);
-			if (currentSprite == 5)
-			{
-				currentSprite = 0;
-			}
-			else if (currentSprite == 11)
-			{
-				currentSprite = 6;
-			}
-			else if (currentSprite == 17)
-			{
-				currentSprite = 12;
-			}
-			else if (currentSprite == 23)
-			{
-				currentSprite = 18;
-			}
-			else
-				currentSprite += 1;
-			sprite.setTextureRect(playerSpriteRect);
-		}
-		else
-		{
-			IntRect playerSpriteRect = IntRect(32 * (attackSprite % 8), 40 * (int)(attackSprite / 8), 32, 40);
-			if (attackSprite == 52 || attackSprite == 57 || attackSprite == 62 || attackSprite == 67)
-			{
-				attackSprite = -1;
-			}
-			else
-			{
-				attackSprite += 1;
-			}
-			sprite.setTextureRect(playerSpriteRect);
-		}
-	}
-
 	Sprite* getSprite()
 	{
-		return &sprite;
+		return currentAnimation->getSprite();
+	}
+
+	void updateSpritePosition()
+	{
+		currentAnimation->getSprite()->setPosition(playerBox.getPosition());
+	}
+
+	void updateTarget(Vector2f v)
+	{
+		target = v;
 	}
 
 	std::shared_ptr<Projectile> shoot(Vector2f p)
 	{
 		std::shared_ptr<Projectile> cproj(new CircleProjectile);
-		cproj->spawn(playerBox.getPosition() + playerBox.getSize()/2.f, p);
+		cproj->spawn(playerBox.getPosition() + playerBox.getSize() / 2.f, p);
 		return cproj;
+	}
+
+	std::vector<std::shared_ptr<Projectile>>* getPlayerProjectiles()
+	{
+		return &playerProjectiles;
 	}
 };
