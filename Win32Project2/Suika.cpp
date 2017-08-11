@@ -5,9 +5,6 @@ Suika::Suika(Vector2f p)
 	suika = RectangleShape(Vector2f(32, 40));
 	suika.setPosition(p);
 	suika.setFillColor(Color::Red);
-	collisionBox = RectangleShape(Vector2f(64, 80));
-	collisionBox.setOrigin(Vector2f(16, 20));
-	collisionBox.setPosition(suika.getPosition());
 	velocity = Vector2f(0, 0);
 	counter = 4;
 	moveState = 0;
@@ -19,8 +16,7 @@ Suika::~Suika()
 
 std::shared_ptr<Projectile> Suika::shoot(Vector2f playerPosition)
 {
-	std::shared_ptr<Projectile> cproj(new CircleProjectile);
-	cproj->spawn(suika.getPosition(), playerPosition);
+	std::shared_ptr<Projectile> cproj(new CircleProjectile(suika.getPosition(), playerPosition));
 	return cproj;
 }
 
@@ -204,7 +200,6 @@ void Suika::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 	if (moveState == 0)
 	{
 		sprite.setPosition(suika.getPosition());
-		collisionBox.move(velocity);
 		++counter;
 	}
 	else
@@ -218,11 +213,6 @@ void Suika::clearStack()
 	while (!path.empty())
 		path.pop();
 	moveState = 2;
-}
-
-RectangleShape* Suika::getCollisionBox()
-{
-	return &collisionBox;
 }
 
 int Suika::getMoveState()

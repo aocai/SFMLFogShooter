@@ -5,9 +5,6 @@ Aya::Aya(Vector2f p)
 	aya = RectangleShape(Vector2f(32,40));
 	aya.setPosition(p);
 	aya.setFillColor(Color::Red);
-	collisionBox = RectangleShape(Vector2f(64, 80));
-	collisionBox.setOrigin(Vector2f(16, 20));
-	collisionBox.setPosition(aya.getPosition());
 	velocity = Vector2f(0, 0);
 	counter = 4;
 	moveState = 0;
@@ -19,8 +16,7 @@ Aya::~Aya()
 
 std::shared_ptr<Projectile> Aya::shoot(Vector2f playerPosition)
 {
-	std::shared_ptr<Projectile> cproj(new CircleProjectile);
-	cproj->spawn(aya.getPosition(), playerPosition);
+	std::shared_ptr<Projectile> cproj(new CircleProjectile(aya.getPosition(), playerPosition));
 	return cproj;
 }
 
@@ -204,7 +200,6 @@ void Aya::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 	if (moveState == 0)
 	{
 		sprite.setPosition(aya.getPosition());
-		collisionBox.move(velocity);
 		++counter;
 	}
 	else
@@ -218,11 +213,6 @@ void Aya::clearStack()
 	while (!path.empty())
 		path.pop();
 	moveState = 2;
-}
-
-RectangleShape* Aya::getCollisionBox()
-{
-	return &collisionBox;
 }
 
 int Aya::getMoveState()

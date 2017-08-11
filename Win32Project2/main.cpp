@@ -1155,17 +1155,10 @@ int main()
 		//update projectile
 		for (size_t i = 0; i < allProjectiles.size(); ++i)
 		{
-			allProjectiles[i]->position += allProjectiles[i]->velocity;
-			//check for bounds
-			if (allProjectiles[i]->position.x < 0 || allProjectiles[i]->position.x > 1280 ||
-				allProjectiles[i]->position.y < 0 || allProjectiles[i]->position.y > 720)
+			if (!allProjectiles[i]->updateProjectile())
 			{
 				allProjectiles.erase(allProjectiles.begin() + i);
 				--i;
-			}
-			else
-			{
-				allProjectiles[i]->getProjectile()->move(allProjectiles[i]->velocity);
 			}
 		}
 
@@ -1180,17 +1173,10 @@ int main()
 		//update player projectile
 		for (size_t i = 0; i < playerProjectiles->size(); ++i)
 		{
-			(*playerProjectiles)[i]->position += (*playerProjectiles)[i]->velocity;
-			//check for bounds
-			if ((*playerProjectiles)[i]->position.x < 0 || (*playerProjectiles)[i]->position.x > 1280 ||
-				(*playerProjectiles)[i]->position.y < 0 || (*playerProjectiles)[i]->position.y > 720)
+			if (!(*playerProjectiles)[i]->updateProjectile())
 			{
 				(*playerProjectiles).erase((*playerProjectiles).begin() + i);
 				--i;
-			}
-			else
-			{
-				(*playerProjectiles)[i]->getProjectile()->move((*playerProjectiles)[i]->velocity);
 			}
 		}
 

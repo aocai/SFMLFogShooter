@@ -5,9 +5,6 @@ Cirno::Cirno(Vector2f p)
 	cirno = RectangleShape(Vector2f(32, 40));
 	cirno.setPosition(p);
 	cirno.setFillColor(Color::Red);
-	collisionBox = RectangleShape(Vector2f(64, 80));
-	collisionBox.setOrigin(Vector2f(16, 20));
-	collisionBox.setPosition(cirno.getPosition());
 	velocity = Vector2f(0, 0);
 	counter = 4;
 	moveState = 0;
@@ -19,8 +16,7 @@ Cirno::~Cirno()
 
 std::shared_ptr<Projectile> Cirno::shoot(Vector2f playerPosition)
 {
-	std::shared_ptr<Projectile> cproj (new CircleProjectile);
-	cproj->spawn(cirno.getPosition(), playerPosition);
+	std::shared_ptr<Projectile> cproj (new CircleProjectile(cirno.getPosition(), playerPosition));
 	return cproj;
 }
 
@@ -203,7 +199,6 @@ void Cirno::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 	if (moveState == 0)
 	{
 		sprite.setPosition(cirno.getPosition());
-		collisionBox.move(velocity);
 		++counter;
 	}
 	else
@@ -217,11 +212,6 @@ void Cirno::clearStack()
 	while (!path.empty())
 		path.pop();
 	moveState = 2;
-}
-
-RectangleShape* Cirno::getCollisionBox()
-{
-	return &collisionBox;
 }
 
 int Cirno::getMoveState()

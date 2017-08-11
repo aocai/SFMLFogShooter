@@ -146,8 +146,7 @@ public:
 
 	std::shared_ptr<Projectile> shoot(Vector2f p)
 	{
-		std::shared_ptr<Projectile> cproj(new CircleProjectile);
-		cproj->spawn(playerBox.getPosition() + playerBox.getSize() / 2.f, p);
+		std::shared_ptr<Projectile> cproj(new CircleProjectile(playerBox.getPosition() + playerBox.getSize() / 2.f, p));
 		return cproj;
 	}
 

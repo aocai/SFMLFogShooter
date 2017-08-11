@@ -7,9 +7,14 @@ class CircleProjectile
 {
 private:
 	CircleShape ci;
+	Vector2f position;
+	Vector2f velocity;
+	Animation animation;
 public:
-	void spawn(Vector2f, Vector2f);
-	Shape* getProjectile();
 	CircleProjectile();
+	CircleProjectile(Vector2f, Vector2f);
+	void setAnimation(Texture&, float);
+	Shape* getProjectile();
+	bool updateProjectile();
 	~CircleProjectile();
 };

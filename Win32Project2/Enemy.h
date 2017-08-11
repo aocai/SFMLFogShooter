@@ -18,7 +18,6 @@ public:
 	virtual void enemyPathfinder(std::vector<double>&, Vector2f, std::vector<int>&) = 0;
 	virtual void updateEnemy(std::vector<std::shared_ptr<Enemy>>&) = 0;
 	virtual void clearStack() = 0;
-	virtual RectangleShape* getCollisionBox() = 0;
 	virtual int getMoveState() = 0;
 	Enemy();
 	virtual ~Enemy();

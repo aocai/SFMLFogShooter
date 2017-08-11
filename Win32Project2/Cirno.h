@@ -11,7 +11,6 @@ class Cirno :
 private:
 	RectangleShape cirno;
 	Sprite sprite;
-	RectangleShape collisionBox;
 	int moveState;
 
 	int prevDirection;
@@ -31,7 +30,6 @@ public:
 	void enemyPathfinder(std::vector<double>&, Vector2f, std::vector<int>&);
 	void updateEnemy(std::vector<std::shared_ptr<Enemy>>&);
 	void clearStack();
-	RectangleShape* getCollisionBox();
 	int getMoveState();
 	Cirno(Vector2f);
 	~Cirno();
