@@ -852,37 +852,42 @@ int main()
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
 	std::vector<std::shared_ptr<Enemy>> enemyVector;
-
-	//spawn Cirno
-	std::shared_ptr<Enemy> cirno(new Cirno(Vector2f(20, 20)));
-	Texture Cirno;
-	Cirno.loadFromFile("sprites\\Cirno.png");
-	cirno->setSprite(Cirno);
-	enemyVector.push_back(cirno);
-
-	//Spawn Aya
-	std::shared_ptr<Enemy> aya(new Aya(Vector2f(1000, 20)));
-	Texture Aya;
-	Aya.loadFromFile("sprites\\Aya Shameimaru.png");
-	aya->setSprite(Aya);
-	enemyVector.push_back(aya);
-
-	//Spawn Suika
-	std::shared_ptr<Enemy> suika(new Suika(Vector2f(500, 450)));
-	Texture Suika;
-	Suika.loadFromFile("sprites\\Suika Ibuki.png");
-	suika->setSprite(Suika);
-	enemyVector.push_back(suika);
-
 	std::vector<int> workVector(128 * 72, 0);
 
-	Texture Flandre;
-	Flandre.loadFromFile("sprites\\Flandre Scarlet.png");
+	Texture ayaTexture;
+	Texture cirnoTexture;
+	Texture flandreTexture;
+	Texture sakuyaTexture;
+	Texture suikaTexture;
+	ayaTexture.loadFromFile("sprites\\Aya Shameimaru.png");
+	cirnoTexture.loadFromFile("sprites\\Cirno.png");
+	flandreTexture.loadFromFile("sprites\\Flandre Scarlet.png");
+	sakuyaTexture.loadFromFile("sprites\\Sakuya Izayoi.png");
+	suikaTexture.loadFromFile("sprites\\Suika Ibuki.png");
 
-	player.setMoveAnimation(Flandre, 0.1f);
-	player.setAttackAnimation(Flandre, 0.15f);
+	std::shared_ptr<Enemy> aya(new Aya(Vector2f(1000, 20)));
+	aya->setMoveAnimation(ayaTexture, 0.1f);
+	aya->setAttackAnimation(ayaTexture, 0.15f);
+	enemyVector.push_back(aya);
+
+	std::shared_ptr<Enemy> cirno(new Cirno(Vector2f(20, 20)));
+	cirno->setMoveAnimation(cirnoTexture, 0.1f);
+	cirno->setAttackAnimation(cirnoTexture, 0.15f);
+	enemyVector.push_back(cirno);
+
+	std::shared_ptr<Enemy> sakuya(new Sakuya(Vector2f(1000, 500)));
+	sakuya->setMoveAnimation(sakuyaTexture, 0.1f);
+	sakuya->setAttackAnimation(sakuyaTexture, 0.15f);
+	enemyVector.push_back(sakuya);
+
+	std::shared_ptr<Enemy> suika(new Suika(Vector2f(500, 450)));
+	suika->setMoveAnimation(suikaTexture, 0.1f);
+	suika->setAttackAnimation(suikaTexture, 0.15f);
+	enemyVector.push_back(suika);
+
+	player.setMoveAnimation(flandreTexture, 0.1f);
+	player.setAttackAnimation(flandreTexture, 0.15f);
 	player.getSprite()->setPosition(player.getPosition());
-	//player.setCurrentAnimation(3);
 	
 	std::vector<int> dirtyWalls(walls.size(), 0);
 	size_t currentWall = walls.size();
@@ -958,53 +963,50 @@ int main()
 		//do for all directional keys
 		if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
 		{
-			player.getPlayer()->move(Vector2f(-3.0f, 0));
+			player.move(Vector2f(-3.0f, 0));
 			for (const auto &w : walls)
 			{
-				while (w.getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				while (w.getGlobalBounds().intersects(player.getBounds()))
 				{
-					player.getPlayer()->move(Vector2f(1.0f, 0));
+					player.move(Vector2f(1.0f, 0));
 				}
 			}
 			if (player.getPosition().x < 0)
 			{
-				player.getPlayer()->move(Vector2f(-player.getPosition().x, 0));
+				player.move(Vector2f(-player.getPosition().x, 0));
 			}
-
 			player.setCurrentAnimation(0);
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
 		{
-			player.getPlayer()->move(Vector2f(3.0f, 0));
+			player.move(Vector2f(3.0f, 0));
 			for (const auto &w : walls)
 			{
-				while (w.getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				while (w.getGlobalBounds().intersects(player.getBounds()))
 				{
-					player.getPlayer()->move(Vector2f(-1.0f, 0));
+					player.move(Vector2f(-1.0f, 0));
 				}
 			}
-			if (player.getPosition().x + player.getPlayer()->getSize().x > 1280)
+			if (player.getPosition().x + player.getSize().x > 1280)
 			{
-				player.getPlayer()->move(Vector2f(1280 - (player.getPlayer()->getSize().x + player.getPlayer()->getPosition().x), 0));
+				player.move(Vector2f(1280 - (player.getSize().x + player.getPosition().x), 0));
 			}
-
 			player.setCurrentAnimation(1);
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
 		{
-			player.getPlayer()->move(Vector2f(0, -3.0f));
+			player.move(Vector2f(0, -3.0f));
 			for (const auto &w : walls)
 			{
-				while (w.getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				while (w.getGlobalBounds().intersects(player.getBounds()))
 				{
-					player.getPlayer()->move(Vector2f(0, 1.0f));
+					player.move(Vector2f(0, 1.0f));
 				}
 			}
 			if (player.getPosition().y < 0)
 			{
-				player.getPlayer()->move(Vector2f(0, -player.getPlayer()->getPosition().y));
+				player.move(Vector2f(0, -player.getPosition().y));
 			}
-
 			if (!(Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D)))
 			{
 				player.setCurrentAnimation(2);
@@ -1012,19 +1014,18 @@ int main()
 		}
 		if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
 		{
-			player.getPlayer()->move(Vector2f(0, 3.0f));
+			player.move(Vector2f(0, 3.0f));
 			for (const auto &w : walls)
 			{
-				while (w.getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				while (w.getGlobalBounds().intersects(player.getBounds()))
 				{
-					player.getPlayer()->move(Vector2f(0, -1.0f));
+					player.move(Vector2f(0, -1.0f));
 				}
 			}
-			if (player.getPlayer()->getPosition().y + player.getPlayer()->getSize().y > 720)
+			if (player.getPosition().y + player.getSize().y > 720)
 			{
-				player.getPlayer()->move(Vector2f(0, 720 - (player.getPlayer()->getSize().y + player.getPlayer()->getPosition().y)));
+				player.move(Vector2f(0, 720 - (player.getSize().y + player.getPosition().y)));
 			}
-
 			if (!(Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D)))
 			{
 				player.setCurrentAnimation(3);
@@ -1037,7 +1038,7 @@ int main()
 			if (clock.getElapsedTime().asSeconds() - playerAttackTime > 1.f)
 			{
 				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
-				Vector2f v = mouseV - (player.getPosition() + player.getPlayer()->getSize()/2.f);
+				Vector2f v = mouseV - (player.getPosition() + Vector2f(16,20));
 				if (abs(v.y) > abs(v.x))
 				{
 					if (v.y < 0)
@@ -1065,8 +1066,8 @@ int main()
 			}
 		}
 
+		player.updatePosition();
 		player.updateAnimation();
-		player.updateSpritePosition();
 
 		//current mouse coordinates
 		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
@@ -1115,7 +1116,7 @@ int main()
 			}
 			for (const auto &e : enemyVector)
 			{
-				if (!e->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+				if (!e->getBounds().intersects(player.getBounds()))
 				{
 					e->enemyPathfinder(mapMatrix, player.getPosition(), workVector);
 				}
@@ -1130,13 +1131,14 @@ int main()
 		for (const auto &e : enemyVector)
 		{
 			e->updateEnemy(enemyVector);
-			if (e->getEnemy()->getGlobalBounds().intersects(player.getPlayer()->getGlobalBounds()))
+			if (e->getBounds().intersects(player.getBounds()))
 			{
 				//reached
-				e->clearStack();
+				e->targetReached();
 			}
 		}
 
+		/*
 		if (clock.getElapsedTime().asSeconds() - enemyTime > 0.1)
 		{
 			for (const auto &e : enemyVector)
@@ -1144,6 +1146,13 @@ int main()
 				e->updateSprite();
 			}
 			enemyTime = clock.getElapsedTime().asSeconds();
+		}
+		*/
+
+		for (const auto &e : enemyVector)
+		{
+			e->updateAnimation();
+			e->updateSpritePosition();
 		}
 
 		//draw enemy
@@ -1205,7 +1214,8 @@ int main()
 		}
 
 		//draw player
-		window.draw(*(player.getSprite()));
+		//window.draw(*(player.getSprite()));
+		player.draw(window);
 
 		window.display();
 	}

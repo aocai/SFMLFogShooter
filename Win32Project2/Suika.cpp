@@ -2,12 +2,14 @@
 
 Suika::Suika(Vector2f p)
 {
-	suika = RectangleShape(Vector2f(32, 40));
-	suika.setPosition(p);
-	suika.setFillColor(Color::Red);
+	character = RectangleShape(Vector2f(32, 40));
+	character.setPosition(p);
 	velocity = Vector2f(0, 0);
 	counter = 4;
 	moveState = 0;
+
+	currentAnimation = &down;
+	currentAni = 3;
 }
 
 Suika::~Suika()
@@ -16,206 +18,22 @@ Suika::~Suika()
 
 std::shared_ptr<Projectile> Suika::shoot(Vector2f playerPosition)
 {
-	std::shared_ptr<Projectile> cproj(new CircleProjectile(suika.getPosition(), playerPosition));
+	std::shared_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + character.getSize() / 2.f, playerPosition));
 	return cproj;
 }
 
-Shape* Suika::getEnemy()
+void Suika::setMoveAnimation(Texture &t, float speed)
 {
-	return &suika;
+	left = Animation(t, 0, 80, 8, 32, 40, speed);
+	right = Animation(t, 0, 120, 8, 32, 40, speed);
+	up = Animation(t, 0, 0, 8, 32, 40, speed);
+	down = Animation(t, 0, 40, 8, 32, 40, speed);
 }
 
-void Suika::setSprite(Texture &texture)
+void Suika::setAttackAnimation(Texture &t, float speed)
 {
-	IntRect enemySpriteRect(128, 0, 32, 40);
-	sprite = Sprite(texture, enemySpriteRect);
-	sprite.setPosition(suika.getPosition());
-	currentSprite = 8;
-	prevDirection = -1;
-}
-
-void Suika::updateSpriteNumber(int i)
-{
-	if (i != prevDirection)
-	{
-		if (i == 0) //left
-		{
-			if ((currentSprite < 16 || currentSprite >= 24))
-			{
-				currentSprite = 16;
-			}
-		}
-		else if (i == 1) //right
-		{
-			if ((currentSprite < 24 || currentSprite >= 32))
-			{
-				currentSprite = 24;
-			}
-		}
-		else if (i == 2) //up
-		{
-			if (currentSprite >= 8)
-			{
-				currentSprite = 0;
-			}
-		}
-		else if (i == 3) //down
-		{
-			if ((currentSprite < 8 || currentSprite >= 16))
-			{
-				currentSprite = 8;
-			}
-		}
-	}
-	prevDirection = i;
-}
-
-void Suika::updateSprite()
-{
-	IntRect playerSpriteRect = IntRect(32 * (currentSprite % 8), 40 * (int)(currentSprite / 8), 32, 40);
-	if (currentSprite == 7)
-	{
-		currentSprite = 0;
-	}
-	else if (currentSprite == 15)
-	{
-		currentSprite = 8;
-	}
-	else if (currentSprite == 23)
-	{
-		currentSprite = 16;
-	}
-	else if (currentSprite == 31)
-	{
-		currentSprite = 24;
-	}
-	else
-		currentSprite += 1;
-	sprite.setTextureRect(playerSpriteRect);
-}
-
-Sprite* Suika::getSprite()
-{
-	return &sprite;
-}
-
-void Suika::enemyPathfinder(std::vector<double> &mapMatrix, Vector2f g, std::vector<int> &workVector)
-{
-	Vector2f v = suika.getPosition();
-	int start = (128 * (int)(v.y / 10)) + (int)(v.x / 10);
-	int goal = (128 * (int)(g.y / 10)) + (int)(g.x / 10);
-	bool success = AStar(mapMatrix, start, goal, workVector);
-
-	if (success)
-	{
-		while (!path.empty())
-		{
-			path.pop();
-		}
-		while (start != goal)
-		{
-			//path.push(goal);
-			int temp = workVector[goal];
-			if (temp == goal - 1)
-			{
-				path.push(1); //go right
-			}
-			else if (temp == goal + 1)
-			{
-				path.push(0); // go left
-			}
-			else if (temp > goal)
-			{
-				path.push(2); // go up
-			}
-			else
-			{
-				path.push(3); //go down
-			}
-			goal = temp;
-		}
-		counter = 4;
-		moveState = 0;
-	}
-	fill(workVector.begin(), workVector.end(), 0);
-	return;
-}
-
-void Suika::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
-{
-	if (path.empty())
-		return;
-	if (counter == 4)
-	{
-		int direction = path.top();
-		path.pop();
-		Vector2f v;
-		if (direction == 0)
-		{
-			v = Vector2f(-10, 0);
-		}
-		else if (direction == 1)
-		{
-			v = Vector2f(10, 0);
-		}
-		else if (direction == 2)
-		{
-			v = Vector2f(0, -10);
-		}
-		else
-		{
-			v = Vector2f(0, 10);
-		}
-		v /= 4.0f;
-		velocity = v;
-		updateSpriteNumber(direction);
-		counter = 0;
-	}
-
-	suika.move(velocity);
-
-	moveState = 0;
-	for (const auto &e : enemyVector)
-	{
-		if (this == e.get())
-			continue;
-		if (e->getMoveState() == 1)
-		{
-		}
-		else if (e->getMoveState() == 2)
-		{
-			if (suika.getGlobalBounds().intersects(e->getEnemy()->getGlobalBounds()))
-			{
-				moveState = 2;
-				break;
-			}
-		}
-		else if (suika.getGlobalBounds().intersects(e->getEnemy()->getGlobalBounds()))
-		{
-			moveState = 1;
-			break;
-		}
-	}
-
-	if (moveState == 0)
-	{
-		sprite.setPosition(suika.getPosition());
-		++counter;
-	}
-	else
-	{
-		suika.move(-velocity);
-	}
-}
-
-void Suika::clearStack()
-{
-	while (!path.empty())
-		path.pop();
-	moveState = 2;
-}
-
-int Suika::getMoveState()
-{
-	return moveState;
+	leftAttack = Animation(t, 0, 80, 8, 32, 40, speed);
+	rightAttack = Animation(t, 0, 120, 8, 32, 40, speed);
+	upAttack = Animation(t, 0, 0, 8, 32, 40, speed);
+	downAttack = Animation(t, 0, 40, 8, 32, 40, speed);
 }

@@ -9,8 +9,7 @@ using namespace sf;
 class Player
 {
 private:
-	//Vector2f position;
-	RectangleShape playerBox;
+	RectangleShape player;
 	int currentAni;
 	Animation* currentAnimation;
 	Animation left;
@@ -27,11 +26,11 @@ private:
 
 	std::vector<std::shared_ptr<Projectile>> playerProjectiles;
 public:
-	Player(Vector2f &size, Vector2f &pos)
+	Player(Vector2f size, Vector2f pos)
 	{
 		//position = pos + Vector2f(size.x/2, size.y/2);
-		playerBox.setSize(size);
-		playerBox.setPosition(pos);
+		player = RectangleShape(size);
+		player.setPosition(pos);
 		currentAnimation = &down;
 		currentAni = 3;
 	}
@@ -109,6 +108,11 @@ public:
 		}
 	}
 
+	void updatePosition()
+	{
+		currentAnimation->setPosition(player.getPosition());
+	}
+
 	void updateAnimation()
 	{
 		currentAnimation->update();
@@ -121,12 +125,12 @@ public:
 
 	Vector2f getPosition()
 	{
-		return playerBox.getPosition();
+		return player.getPosition();
 	}
 
-	RectangleShape* getPlayer()
+	Vector2f getSize()
 	{
-		return &playerBox;
+		return Vector2f(32, 40);
 	}
 
 	Sprite* getSprite()
@@ -134,9 +138,9 @@ public:
 		return currentAnimation->getSprite();
 	}
 
-	void updateSpritePosition()
+	void move(Vector2f v)
 	{
-		currentAnimation->getSprite()->setPosition(playerBox.getPosition());
+		player.move(v);
 	}
 
 	void updateTarget(Vector2f v)
@@ -146,12 +150,22 @@ public:
 
 	std::shared_ptr<Projectile> shoot(Vector2f p)
 	{
-		std::shared_ptr<Projectile> cproj(new CircleProjectile(playerBox.getPosition() + playerBox.getSize() / 2.f, p));
+		std::shared_ptr<Projectile> cproj(new CircleProjectile(getPosition() + Vector2f(16,20), p));
 		return cproj;
 	}
 
 	std::vector<std::shared_ptr<Projectile>>* getPlayerProjectiles()
 	{
 		return &playerProjectiles;
+	}
+
+	FloatRect getBounds()
+	{
+		return player.getGlobalBounds();
+	}
+
+	void draw(RenderWindow &window)
+	{
+		window.draw(*currentAnimation->getSprite());
 	}
 };

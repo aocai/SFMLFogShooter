@@ -8,29 +8,10 @@
 class Aya :
 	public Enemy
 {
-private:
-	RectangleShape aya;
-	Sprite sprite;
-	int moveState;
-
-	int prevDirection;
-	int currentSprite;
-
-	Vector2f velocity;
-	int counter;
-
-	std::stack<int> path;
 public:
 	std::shared_ptr<Projectile> shoot(Vector2f);
-	Shape* getEnemy();
-	void setSprite(Texture&);
-	void updateSpriteNumber(int);
-	void updateSprite();
-	Sprite* getSprite();
-	void enemyPathfinder(std::vector<double>&, Vector2f, std::vector<int>&);
-	void updateEnemy(std::vector<std::shared_ptr<Enemy>>&);
-	void clearStack();
-	int getMoveState();
 	Aya(Vector2f);
 	~Aya();
+	void setMoveAnimation(Texture&, float);
+	void setAttackAnimation(Texture&, float);
 };

@@ -160,6 +160,7 @@
     <ClCompile Include="Projectile.cpp" />
     <ClCompile Include="CircleProjectile.cpp" />
     <ClCompile Include="Cirno.cpp" />
+    <ClCompile Include="Sakuya.cpp" />
     <ClCompile Include="Suika.cpp" />
     <ClCompile Include="utilities.cpp" />
   </ItemGroup>
@@ -169,6 +170,7 @@
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="CircleProjectile.h" />
     <ClInclude Include="AStar.h" />
+    <ClInclude Include="Sakuya.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="PriorityQueue.h" />
     <ClInclude Include="Projectile.h" />
