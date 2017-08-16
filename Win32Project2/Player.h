@@ -25,10 +25,11 @@ private:
 	int hp;
 
 	std::vector<std::shared_ptr<Projectile>> playerProjectiles;
+	
+	Animation rangeAnimation;
 public:
 	Player(Vector2f size, Vector2f pos)
 	{
-		//position = pos + Vector2f(size.x/2, size.y/2);
 		player = RectangleShape(size);
 		player.setPosition(pos);
 		currentAnimation = &down;
@@ -54,6 +55,11 @@ public:
 		rightAttack = Animation(t, 224, 280, 5, 32, 40, speed);
 		upAttack = Animation(t, 0, 240, 5, 32, 40, speed);
 		downAttack = Animation(t, 160, 240, 5, 32, 40, speed);
+	}
+
+	void setRangeAnimation(Texture &t, float speed)
+	{
+		rangeAnimation = Animation(t, 128, 320, 4, 32, 48, speed);
 	}
 
 	void setCurrentAnimation(int i)
@@ -138,19 +144,13 @@ public:
 		return currentAnimation->getSprite();
 	}
 
-	void move(Vector2f v)
-	{
-		player.move(v);
-	}
-
-	void updateTarget(Vector2f v)
-	{
-		target = v;
-	}
-
 	std::shared_ptr<Projectile> shoot(Vector2f p)
 	{
 		std::shared_ptr<Projectile> cproj(new CircleProjectile(getPosition() + Vector2f(16,20), p));
+		Vector2f v = p - (getPosition() + Vector2f(16, 20));
+		Vector2f w(0, -1);
+		float angle = atan2(determinant(v, w), dotProduct(v, w)) * 180.0 / 3.14159265;
+		cproj->setAnimation(rangeAnimation, -angle);
 		return cproj;
 	}
 
@@ -167,5 +167,101 @@ public:
 	void draw(RenderWindow &window)
 	{
 		window.draw(*currentAnimation->getSprite());
+	}
+
+	void updateProjectile()
+	{
+		for (size_t i = 0; i < playerProjectiles.size(); ++i)
+		{
+			if (!playerProjectiles[i]->updateProjectile())
+			{
+				playerProjectiles.erase(playerProjectiles.begin() + i);
+				--i;
+			}
+		}
+	}
+
+	void drawProjectile(RenderWindow &window)
+	{
+		for (const auto &p : playerProjectiles)
+		{
+			p->updateAnimation();
+			p->updateSpritePosition();
+			window.draw(*(p->getProjectile()));
+			window.draw(*(p->getSprite()));
+		}
+	}
+
+	void rangeAttack(Vector2f v)
+	{
+		target = v;
+		v = v - (getPosition() + Vector2f(16, 20));
+		if (abs(v.y) > abs(v.x))
+		{
+			if (v.y < 0)
+				setCurrentAnimation(6);
+			else
+				setCurrentAnimation(7);
+		}
+		else
+		{
+			if (v.x < 0)
+				setCurrentAnimation(4);
+			else
+				setCurrentAnimation(5);
+		}
+	}
+
+	void move(Vector2f v, const std::vector<RectangleShape> &walls)
+	{
+		//move x component
+		player.move(Vector2f(v.x, 0));
+		for (const auto &w : walls)
+		{
+			while (w.getGlobalBounds().intersects(player.getGlobalBounds()))
+			{
+				if (v.x < 0)
+					player.move(Vector2f(1.0f, 0));
+				else
+					player.move(Vector2f(-1.0f, 0));
+			}
+		}
+		if (player.getPosition().x < 0)
+			player.move(Vector2f(-player.getPosition().x, 0));
+		else if (player.getPosition().x + player.getSize().x > 1280)
+			player.move(Vector2f(1280 - (player.getSize().x + player.getPosition().x), 0));
+		
+		//move y component
+		player.move(Vector2f(0, v.y));
+		for (const auto &w : walls)
+		{
+			while (w.getGlobalBounds().intersects(player.getGlobalBounds()))
+			{
+				if (v.y < 0)
+					player.move(Vector2f(0, 1.0f));
+				else
+					player.move(Vector2f(0, -1.0f));
+			}
+		}
+		if (player.getPosition().y < 0)
+			player.move(Vector2f(0, -player.getPosition().y));
+		else if (player.getPosition().y + player.getSize().y > 720)
+			player.move(Vector2f(0, 720 - (player.getSize().y + player.getPosition().y)));
+
+		if (v.x != 0)
+		{
+			if (v.x < 0)
+				setCurrentAnimation(0);
+			else
+				setCurrentAnimation(1);
+		}
+		else
+		{
+			if (v.y < 0)
+				setCurrentAnimation(2);
+			else
+				setCurrentAnimation(3);
+		}
+
 	}
 };

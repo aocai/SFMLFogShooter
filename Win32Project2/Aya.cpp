@@ -10,6 +10,8 @@ Aya::Aya(Vector2f p)
 
 	currentAnimation = &down;
 	currentAni = 3;
+
+	range = false;
 }
 
 Aya::~Aya()

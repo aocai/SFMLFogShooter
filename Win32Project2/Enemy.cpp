@@ -22,7 +22,10 @@ void Enemy::targetReached()
 {
 	while (!path.empty())
 		path.pop();
-	moveState = 2;
+	if (range)
+		moveState = 1;
+	else
+		moveState = 2;
 }
 
 int Enemy::getMoveState()
@@ -33,6 +36,10 @@ int Enemy::getMoveState()
 void Enemy::updateAnimation()
 {
 	currentAnimation->update();
+	if (currentAni >= 4 && currentAnimation->isOver())
+	{
+		setCurrentAnimation(currentAni - 4);
+	}
 }
 
 void Enemy::updateSpritePosition()
@@ -95,6 +102,8 @@ void Enemy::setCurrentAnimation(int i)
 void Enemy::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 {
 	if (path.empty())
+		return;
+	if (currentAni >= 4)
 		return;
 	if (counter == 4)
 	{
@@ -199,4 +208,112 @@ void Enemy::enemyPathfinder(std::vector<double> &mapMatrix, Vector2f g, std::vec
 	}
 	fill(workVector.begin(), workVector.end(), 0);
 	return;
+}
+
+void Enemy::setRangeAnimation(Texture &t, float speed)
+{
+
+}
+
+bool Enemy::ranged()
+{
+	return range;
+}
+
+bool Enemy::inRange(Vector2f v)
+{
+	return magnitude(v - character.getPosition()) < 200.f;
+}
+
+void Enemy::meleeAttack(Vector2f v)
+{
+	if (currentAni < 4)
+	{
+		//setCurrentAnimation(currentAni + 4);
+		v = v - (character.getPosition() + Vector2f(16, 20));
+		if (abs(v.y) > abs(v.x))
+		{
+			if (v.y < 0)
+			{
+				setCurrentAnimation(6);
+			}
+			else
+			{
+				setCurrentAnimation(7);
+			}
+		}
+		else
+		{
+			if (v.x < 0)
+			{
+				setCurrentAnimation(4);
+			}
+			else
+			{
+				setCurrentAnimation(5);
+			}
+		}
+	}
+}
+
+void Enemy::rangeAttack(Vector2f v)
+{
+	if (range && currentAni < 4)
+	{
+		//setCurrentAnimation(currentAni + 4);
+		target = v;
+		moveState = 1;
+
+		v = v - (character.getPosition() + Vector2f(16, 20));
+		if (abs(v.y) > abs(v.x))
+		{
+			if (v.y < 0)
+			{
+				setCurrentAnimation(6);
+			}
+			else
+			{
+				setCurrentAnimation(7);
+			}
+		}
+		else
+		{
+			if (v.x < 0)
+			{
+				setCurrentAnimation(4);
+			}
+			else
+			{
+				setCurrentAnimation(5);
+			}
+		}
+	}
+}
+
+void Enemy::updateProjectile()
+{
+	for (size_t i = 0; i < enemyProjectile.size(); ++i)
+	{
+		if (!enemyProjectile[i]->updateProjectile())
+		{
+			enemyProjectile.erase(enemyProjectile.begin() + i);
+			--i;
+		}
+	}
+}
+
+void Enemy::drawEnemy(RenderWindow &window)
+{
+	window.draw(*currentAnimation->getSprite());
+}
+
+void Enemy::drawProjectiles(RenderWindow &window)
+{
+	for (const auto &p : enemyProjectile)
+	{
+		p->updateAnimation();
+		p->updateSpritePosition();
+		window.draw(*(p->getProjectile()));
+		window.draw(*(p->getSprite()));
+	}
 }

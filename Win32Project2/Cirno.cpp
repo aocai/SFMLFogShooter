@@ -10,6 +10,8 @@ Cirno::Cirno(Vector2f p)
 
 	currentAnimation = &down;
 	currentAni = 3;
+
+	range = false;
 }
 
 Cirno::~Cirno()
@@ -33,7 +35,7 @@ void Cirno::setMoveAnimation(Texture &t, float speed)
 void Cirno::setAttackAnimation(Texture &t, float speed)
 {
 	leftAttack = Animation(t, 0, 120, 4, 32, 40, speed);
-	rightAttack = Animation(t, 128, 120, 6, 32, 40, speed);
+	rightAttack = Animation(t, 128, 120, 4, 32, 40, speed);
 	upAttack = Animation(t, 0, 0, 6, 32, 40, speed);
 	downAttack = Animation(t, 192, 0, 6, 32, 40, speed);
 }

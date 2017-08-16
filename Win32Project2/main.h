@@ -7,3 +7,6 @@
 #include "Aya.h"
 #include "Suika.h"
 #include "Sakuya.h"
+
+float windowWidth;
+float windowHeight;

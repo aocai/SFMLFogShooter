@@ -10,6 +10,8 @@ Suika::Suika(Vector2f p)
 
 	currentAnimation = &down;
 	currentAni = 3;
+
+	range = false;
 }
 
 Suika::~Suika()
