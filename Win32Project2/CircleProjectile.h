@@ -11,7 +11,6 @@ private:
 	Vector2f velocity;
 	Animation animation;
 public:
-	CircleProjectile();
 	CircleProjectile(Vector2f, Vector2f);
 	void setAnimation(Texture&, float);
 	void setAnimation(Animation, float);
@@ -21,6 +20,4 @@ public:
 
 	void updateAnimation();
 	void updateSpritePosition();
-
-	~CircleProjectile();
 };

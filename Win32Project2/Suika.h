@@ -7,9 +7,8 @@ class Suika :
 	public Enemy
 {
 public:
-	std::shared_ptr<Projectile> shoot(Vector2f);
+	std::shared_ptr<Projectile> shoot(Vector2f) override;
 	Suika(Vector2f);
-	~Suika();
-	void setMoveAnimation(Texture&, float);
-	void setAttackAnimation(Texture&, float);
+	void setMoveAnimation(Texture&, float) override;
+	void setAttackAnimation(Texture&, float) override;
 };

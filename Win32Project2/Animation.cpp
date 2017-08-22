@@ -48,8 +48,3 @@ bool Animation::isOver()
 {
 	return (frame + speed) >= frames.size();
 }
-
-Animation::~Animation()
-{
-
-}

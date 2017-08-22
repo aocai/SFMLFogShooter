@@ -39,8 +39,7 @@ public:
 	virtual void enemyPathfinder(std::vector<double>&, Vector2f, std::vector<int>&);
 	virtual void updateEnemy(std::vector<std::shared_ptr<Enemy>>&);
 	virtual void targetReached();
-	Enemy();
-	virtual ~Enemy();
+	virtual ~Enemy() = default;
 
 	FloatRect getBounds();
 	Sprite* getSprite();

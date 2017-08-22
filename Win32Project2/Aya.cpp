@@ -14,10 +14,6 @@ Aya::Aya(Vector2f p)
 	range = false;
 }
 
-Aya::~Aya()
-{
-}
-
 std::shared_ptr<Projectile> Aya::shoot(Vector2f playerPosition)
 {
 	std::shared_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + character.getSize()/2.f, playerPosition));

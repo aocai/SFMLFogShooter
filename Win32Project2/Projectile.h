@@ -7,7 +7,6 @@ using namespace sf;
 class Projectile
 {
 public:
-	Projectile();
 	virtual void setAnimation(Texture&, float) = 0;
 	virtual void setAnimation(Animation, float) = 0;
 	virtual Shape* getProjectile() = 0;
@@ -17,5 +16,5 @@ public:
 	virtual void updateAnimation() = 0;
 	virtual void updateSpritePosition() = 0;
 
-	virtual ~Projectile();
+	virtual ~Projectile() = default;
 };

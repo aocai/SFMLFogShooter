@@ -36,11 +36,6 @@ public:
 		currentAni = 3;
 	}
 
-	~Player()
-	{
-
-	}
-
 	void setMoveAnimation(Texture &t, float speed)
 	{
 		left = Animation(t, 128, 40, 6, 32, 40, speed);

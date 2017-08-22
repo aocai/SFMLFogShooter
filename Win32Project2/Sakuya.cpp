@@ -14,10 +14,6 @@ Sakuya::Sakuya(Vector2f p)
 	range = true;
 }
 
-Sakuya::~Sakuya()
-{
-}
-
 std::shared_ptr<Projectile> Sakuya::shoot(Vector2f p)
 {
 	std::shared_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + Vector2f(16, 20), p));

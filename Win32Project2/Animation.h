@@ -18,5 +18,4 @@ public:
 	Sprite* getSprite();
 	void resetFrame();
 	bool isOver();
-	~Animation();
 };

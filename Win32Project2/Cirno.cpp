@@ -14,10 +14,6 @@ Cirno::Cirno(Vector2f p)
 	range = false;
 }
 
-Cirno::~Cirno()
-{
-}
-
 std::shared_ptr<Projectile> Cirno::shoot(Vector2f playerPosition)
 {
 	std::shared_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + character.getSize() / 2.f, playerPosition));

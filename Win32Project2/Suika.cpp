@@ -14,10 +14,6 @@ Suika::Suika(Vector2f p)
 	range = false;
 }
 
-Suika::~Suika()
-{
-}
-
 std::shared_ptr<Projectile> Suika::shoot(Vector2f playerPosition)
 {
 	std::shared_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + character.getSize() / 2.f, playerPosition));

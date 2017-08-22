@@ -8,11 +8,10 @@ class Sakuya :
 {
 	Animation rangedAnimation;
 public:
-	std::shared_ptr<Projectile> shoot(Vector2f);
+	std::shared_ptr<Projectile> shoot(Vector2f) override;
 	Sakuya(Vector2f);
-	~Sakuya();
-	void setMoveAnimation(Texture&, float);
-	void setAttackAnimation(Texture&, float);
-	void setRangeAnimation(Texture&, float);
-	void updateAnimation();
+	void setMoveAnimation(Texture&, float) override;
+	void setAttackAnimation(Texture&, float) override;
+	void setRangeAnimation(Texture&, float) override;
+	void updateAnimation() override;
 };

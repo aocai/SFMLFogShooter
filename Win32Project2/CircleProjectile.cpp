@@ -1,13 +1,5 @@
 #include "CircleProjectile.h"
 
-CircleProjectile::CircleProjectile()
-{
-}
-
-CircleProjectile::~CircleProjectile()
-{
-}
-
 CircleProjectile::CircleProjectile(Vector2f p, Vector2f p2)
 {
 	hitbox = RectangleShape(Vector2f(20, 48));

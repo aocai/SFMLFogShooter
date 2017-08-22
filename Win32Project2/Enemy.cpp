@@ -1,13 +1,5 @@
 #include "Enemy.h"
 
-Enemy::Enemy()
-{
-}
-
-Enemy::~Enemy()
-{
-}
-
 FloatRect Enemy::getBounds()
 {
 	return character.getGlobalBounds();
