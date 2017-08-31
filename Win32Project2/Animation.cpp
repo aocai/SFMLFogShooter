@@ -5,7 +5,7 @@ Animation::Animation()
 
 }
 
-Animation::Animation(Texture &t, int x, int y, int count, int width, int height, float speed)
+Animation::Animation(const Texture &t, int x, int y, int count, int width, int height, float speed)
 {
 	frame = 0;
 	this->speed = speed;
@@ -44,7 +44,7 @@ Sprite* Animation::getSprite()
 	return &sprite;
 }
 
-bool Animation::isOver()
+bool Animation::isOver() const
 {
 	return (frame + speed) >= frames.size();
 }

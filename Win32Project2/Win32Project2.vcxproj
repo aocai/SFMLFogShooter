@@ -157,6 +157,7 @@
     <ClCompile Include="Aya.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Enemy.cpp" />
+    <ClCompile Include="Player.cpp" />
     <ClCompile Include="Projectile.cpp" />
     <ClCompile Include="CircleProjectile.cpp" />
     <ClCompile Include="Cirno.cpp" />

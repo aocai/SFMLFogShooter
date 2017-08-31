@@ -12,8 +12,8 @@ private:
 	Animation animation;
 public:
 	CircleProjectile(Vector2f, Vector2f);
-	void setAnimation(Texture&, float);
-	void setAnimation(Animation, float);
+	void setAnimation(const Texture&, float);
+	void setAnimation(const Animation&, float);
 	Shape* getProjectile();
 	bool updateProjectile();
 	Sprite* getSprite();

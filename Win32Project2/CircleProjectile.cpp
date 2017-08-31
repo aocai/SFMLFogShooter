@@ -11,12 +11,12 @@ CircleProjectile::CircleProjectile(Vector2f p, Vector2f p2)
 	velocity = Vector2f(5.0f * (v / magnitude(v)));
 }
 
-void CircleProjectile::setAnimation(Texture &t, float speed)
+void CircleProjectile::setAnimation(const Texture &t, float speed)
 {
 	animation = Animation(t, 128, 320, 4, 32, 48, speed);
 }
 
-void CircleProjectile::setAnimation(Animation a, float angle)
+void CircleProjectile::setAnimation(const Animation &a, float angle)
 {
 	animation = a;
 	animation.getSprite()->setOrigin(Vector2f(16,20));

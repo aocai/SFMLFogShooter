@@ -842,13 +842,13 @@ int main()
 	walls.push_back(rect5);
 	updateMapMatrix(mapMatrix, rect5.getPosition(), rect5.getPosition() + rect5.getSize(), -1);
 
-	std::vector<std::shared_ptr<Projectile>> allProjectiles;
+	//std::vector<std::shared_ptr<Projectile>> allProjectiles;
 
 	Player player(Vector2f(32,40), Vector2f(windowWidth / 2.f, windowHeight / 2.f));
 
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
-	std::vector<std::shared_ptr<Enemy>> enemyVector;
+	std::vector<std::unique_ptr<Enemy>> enemyVector;
 
 	Texture ayaTexture;
 	Texture cirnoTexture;
@@ -861,26 +861,26 @@ int main()
 	sakuyaTexture.loadFromFile("sprites\\Sakuya Izayoi.png");
 	suikaTexture.loadFromFile("sprites\\Suika Ibuki.png");
 
-	std::shared_ptr<Enemy> aya(new Aya(Vector2f(1000, 20)));
+	std::unique_ptr<Enemy> aya(new Aya(Vector2f(1000, 20)));
 	aya->setMoveAnimation(ayaTexture, 0.1f);
 	aya->setAttackAnimation(ayaTexture, 0.15f);
-	enemyVector.push_back(aya);
+	enemyVector.push_back(std::move(aya));
 
-	std::shared_ptr<Enemy> cirno(new Cirno(Vector2f(20, 20)));
+	std::unique_ptr<Enemy> cirno(new Cirno(Vector2f(20, 20)));
 	cirno->setMoveAnimation(cirnoTexture, 0.1f);
 	cirno->setAttackAnimation(cirnoTexture, 0.15f);
-	enemyVector.push_back(cirno);
+	enemyVector.push_back(std::move(cirno));
 
-	std::shared_ptr<Enemy> sakuya(new Sakuya(Vector2f(1000, 500)));
+	std::unique_ptr<Enemy> sakuya(new Sakuya(Vector2f(1000, 500)));
 	sakuya->setMoveAnimation(sakuyaTexture, 0.1f);
 	sakuya->setAttackAnimation(sakuyaTexture, 0.1f);
 	sakuya->setRangeAnimation(sakuyaTexture, 0.1f);
-	enemyVector.push_back(sakuya);
+	enemyVector.push_back(std::move(sakuya));
 
-	std::shared_ptr<Enemy> suika(new Suika(Vector2f(500, 450)));
+	std::unique_ptr<Enemy> suika(new Suika(Vector2f(500, 450)));
 	suika->setMoveAnimation(suikaTexture, 0.1f);
 	suika->setAttackAnimation(suikaTexture, 0.15f);
-	enemyVector.push_back(suika);
+	enemyVector.push_back(std::move(suika));
 
 	player.setMoveAnimation(flandreTexture, 0.1f);
 	player.setAttackAnimation(flandreTexture, 0.15f);
@@ -1030,36 +1030,48 @@ int main()
 		}
 
 		//do everything for enemies
-		for (const auto &e : enemyVector)
+		for (int i = 0; i < enemyVector.size(); ++i)
 		{
-			e->updateEnemy(enemyVector);
-			if (e->getBounds().intersects(player.getBounds()))
+			if (enemyVector[i]->getCurrentHP() <= 0)
 			{
-				//reached
-				e->targetReached();
-				//do melee atk
-				e->meleeAttack(playerPosition);
+				enemyVector.erase(enemyVector.begin() + i);
+				--i;
 			}
-			else if (e->ranged() && e->inRange(playerPosition))
+			else
 			{
-				//reached range
-				e->targetReached();
-				//do range attack
-				e->rangeAttack(playerPosition);
+				enemyVector[i]->updateEnemy(enemyVector);
+				if (enemyVector[i]->getBounds().intersects(player.getBounds()))
+				{
+					//reached
+					enemyVector[i]->targetReached();
+					//do melee atk
+					enemyVector[i]->meleeAttack(playerPosition);
+				}
+				else if (enemyVector[i]->ranged() && enemyVector[i]->inRange(playerPosition))
+				{
+					//reached range
+					enemyVector[i]->targetReached();
+					//do range attack
+					enemyVector[i]->rangeAttack(playerPosition);
+				}
+
+				enemyVector[i]->updateAnimation(player);
+				enemyVector[i]->updateSpritePosition();
+
+				enemyVector[i]->drawEnemy(window);
 			}
-
-			e->updateAnimation();
-			e->updateSpritePosition();
-
-			e->drawEnemy(window);
 		}
 
 		//update enemy projectiles and draw them
 		for (const auto &e : enemyVector)
 		{
+			e->calcProjCollision(player);
 			e->updateProjectile();
 			e->drawProjectiles(window);
 		}
+
+		//handle player projectile collision
+		player.calcProjCollision(enemyVector);
 
 		//update player projectiles
 		player.updateProjectile();
@@ -1081,6 +1093,9 @@ int main()
 
 		//draw player projectiles
 		player.drawProjectile(window);
+
+		if (player.getCurrentHP() <= 0)
+			window.close();
 
 		window.display();
 	}

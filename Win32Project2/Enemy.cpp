@@ -1,11 +1,11 @@
 #include "Enemy.h"
 
-FloatRect Enemy::getBounds()
+FloatRect Enemy::getBounds() const
 {
 	return character.getGlobalBounds();
 }
 
-Sprite* Enemy::getSprite()
+Sprite* Enemy::getSprite() const
 {
 	return currentAnimation->getSprite();
 }
@@ -20,16 +20,20 @@ void Enemy::targetReached()
 		moveState = 2;
 }
 
-int Enemy::getMoveState()
+int Enemy::getMoveState() const
 {
 	return moveState;
 }
 
-void Enemy::updateAnimation()
+void Enemy::updateAnimation(const Player &player)
 {
 	currentAnimation->update();
 	if (currentAni >= 4 && currentAnimation->isOver())
 	{
+		if (!range && character.getGlobalBounds().intersects(player.getBounds()))
+		{
+			player.takeDamage(5.f);
+		}
 		setCurrentAnimation(currentAni - 4);
 	}
 }
@@ -37,6 +41,11 @@ void Enemy::updateAnimation()
 void Enemy::updateSpritePosition()
 {
 	currentAnimation->getSprite()->setPosition(character.getPosition());
+}
+
+void Enemy::shoot(Vector2f v)
+{
+
 }
 
 void Enemy::setCurrentAnimation(int i)
@@ -91,7 +100,7 @@ void Enemy::setCurrentAnimation(int i)
 	}
 }
 
-void Enemy::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
+void Enemy::updateEnemy(const std::vector<std::unique_ptr<Enemy>> &enemyVector)
 {
 	if (path.empty())
 		return;
@@ -151,6 +160,7 @@ void Enemy::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 
 	if (moveState == 0)
 	{
+		hpBar.move(velocity);
 		currentAnimation->getSprite()->move(velocity);
 		++counter;
 	}
@@ -160,7 +170,7 @@ void Enemy::updateEnemy(std::vector<std::shared_ptr<Enemy>> &enemyVector)
 	}
 }
 
-void Enemy::enemyPathfinder(std::vector<double> &mapMatrix, Vector2f g, std::vector<int> &workVector)
+void Enemy::enemyPathfinder(const std::vector<double> &mapMatrix, Vector2f g, std::vector<int> &workVector)
 {
 	Vector2f v = character.getPosition();
 	int start = (128 * (int)(v.y / 10)) + (int)(v.x / 10);
@@ -202,17 +212,17 @@ void Enemy::enemyPathfinder(std::vector<double> &mapMatrix, Vector2f g, std::vec
 	return;
 }
 
-void Enemy::setRangeAnimation(Texture &t, float speed)
+void Enemy::setRangeAnimation(const Texture &t, float speed)
 {
 
 }
 
-bool Enemy::ranged()
+bool Enemy::ranged() const
 {
 	return range;
 }
 
-bool Enemy::inRange(Vector2f v)
+bool Enemy::inRange(Vector2f v) const
 {
 	return magnitude(v - character.getPosition()) < 200.f;
 }
@@ -222,7 +232,7 @@ void Enemy::meleeAttack(Vector2f v)
 	if (currentAni < 4)
 	{
 		//setCurrentAnimation(currentAni + 4);
-		v = v - (character.getPosition() + Vector2f(16, 20));
+		v -= (character.getPosition() + Vector2f(16, 20));
 		if (abs(v.y) > abs(v.x))
 		{
 			if (v.y < 0)
@@ -253,10 +263,10 @@ void Enemy::rangeAttack(Vector2f v)
 	if (range && currentAni < 4)
 	{
 		//setCurrentAnimation(currentAni + 4);
-		target = v;
+		//target = v;
 		moveState = 1;
 
-		v = v - (character.getPosition() + Vector2f(16, 20));
+		v -= (character.getPosition() + Vector2f(16, 20));
 		if (abs(v.y) > abs(v.x))
 		{
 			if (v.y < 0)
@@ -291,21 +301,49 @@ void Enemy::updateProjectile()
 			enemyProjectile.erase(enemyProjectile.begin() + i);
 			--i;
 		}
+		else
+		{
+			enemyProjectile[i]->updateAnimation();
+			enemyProjectile[i]->updateSpritePosition();
+		}
 	}
 }
 
-void Enemy::drawEnemy(RenderWindow &window)
+void Enemy::drawEnemy(RenderWindow &window) const
 {
 	window.draw(*currentAnimation->getSprite());
+	window.draw(hpBar);
 }
 
-void Enemy::drawProjectiles(RenderWindow &window)
+void Enemy::drawProjectiles(RenderWindow &window) const
 {
 	for (const auto &p : enemyProjectile)
 	{
-		p->updateAnimation();
-		p->updateSpritePosition();
 		window.draw(*(p->getProjectile()));
 		window.draw(*(p->getSprite()));
 	}
+}
+
+void Enemy::calcProjCollision(const Player &player)
+{
+	for (size_t i = 0; i < enemyProjectile.size(); ++i)
+	{
+		if (enemyProjectile[i]->getProjectile()->getGlobalBounds().intersects(player.getBounds()))
+		{
+			player.takeDamage(10.f);
+			enemyProjectile.erase(enemyProjectile.begin() + i);
+			--i;
+		}
+	}
+}
+
+void Enemy::takeDamage(float dmg) const
+{
+	hpBar.scale(Vector2f((hp - dmg) / hp, 1));
+	hp -= dmg;
+}
+
+float Enemy::getCurrentHP() const
+{
+	return hp;
 }

@@ -12,15 +12,14 @@ Suika::Suika(Vector2f p)
 	currentAni = 3;
 
 	range = false;
+	hp = 100.f;
+
+	hpBar = RectangleShape(Vector2f(32, 5));
+	hpBar.setPosition(p - Vector2f(0, 5));
+	hpBar.setFillColor(Color::Red);
 }
 
-std::shared_ptr<Projectile> Suika::shoot(Vector2f playerPosition)
-{
-	std::shared_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + character.getSize() / 2.f, playerPosition));
-	return cproj;
-}
-
-void Suika::setMoveAnimation(Texture &t, float speed)
+void Suika::setMoveAnimation(const Texture &t, float speed)
 {
 	left = Animation(t, 0, 80, 8, 32, 40, speed);
 	right = Animation(t, 0, 120, 8, 32, 40, speed);
@@ -28,7 +27,7 @@ void Suika::setMoveAnimation(Texture &t, float speed)
 	down = Animation(t, 0, 40, 8, 32, 40, speed);
 }
 
-void Suika::setAttackAnimation(Texture &t, float speed)
+void Suika::setAttackAnimation(const Texture &t, float speed)
 {
 	leftAttack = Animation(t, 0, 80, 8, 32, 40, speed);
 	rightAttack = Animation(t, 0, 120, 8, 32, 40, speed);

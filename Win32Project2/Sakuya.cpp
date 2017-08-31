@@ -12,19 +12,24 @@ Sakuya::Sakuya(Vector2f p)
 	currentAni = 3;
 
 	range = true;
+	hp = 100.f;
+
+	hpBar = RectangleShape(Vector2f(32, 5));
+	hpBar.setPosition(p - Vector2f(0, 5));
+	hpBar.setFillColor(Color::Red);
 }
 
-std::shared_ptr<Projectile> Sakuya::shoot(Vector2f p)
+void Sakuya::shoot(Vector2f p)
 {
-	std::shared_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + Vector2f(16, 20), p));
+	std::unique_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + Vector2f(16, 20), p));
 	Vector2f v = p - (character.getPosition() + Vector2f(16, 20));
 	Vector2f w(0, -1);
 	float angle = atan2(determinant(v, w), dotProduct(v, w)) * 180.0 / 3.14159265;
 	cproj->setAnimation(rangedAnimation, -angle);
-	return cproj;
+	enemyProjectile.emplace_back(std::move(cproj));
 }
 
-void Sakuya::setMoveAnimation(Texture &t, float speed)
+void Sakuya::setMoveAnimation(const Texture &t, float speed)
 {
 	left = Animation(t, 128, 40, 6, 32, 40, speed);
 	right = Animation(t, 64, 80, 6, 32, 40, speed);
@@ -32,7 +37,7 @@ void Sakuya::setMoveAnimation(Texture &t, float speed)
 	down = Animation(t, 192, 0, 6, 32, 40, speed);
 }
 
-void Sakuya::setAttackAnimation(Texture &t, float speed)
+void Sakuya::setAttackAnimation(const Texture &t, float speed)
 {
 	leftAttack = Animation(t, 192, 120, 3, 32, 40, speed);
 	rightAttack = Animation(t, 32, 160, 3, 32, 40, speed);
@@ -40,18 +45,19 @@ void Sakuya::setAttackAnimation(Texture &t, float speed)
 	downAttack = Animation(t, 96, 120, 3, 32, 40, speed);
 }
 
-void Sakuya::setRangeAnimation(Texture &t, float speed)
+void Sakuya::setRangeAnimation(const Texture &t, float speed)
 {
 	rangedAnimation = Animation(t, 128, 160, 1, 32, 40, speed);
 }
 
 
-void Sakuya::updateAnimation()
+void Sakuya::updateAnimation(const Player &player)
 {
 	currentAnimation->update();
 	if (currentAni >= 4 && currentAnimation->isOver())
 	{
-		enemyProjectile.push_back(shoot(target));
+		//shoot(target);
+		shoot(player.getPosition() + player.getSize() / 2.f);
 		setCurrentAnimation(currentAni - 4);
 	}
 }

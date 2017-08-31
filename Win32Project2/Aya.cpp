@@ -12,15 +12,14 @@ Aya::Aya(Vector2f p)
 	currentAni = 3;
 
 	range = false;
+	hp = 100.f;
+
+	hpBar = RectangleShape(Vector2f(32, 5));
+	hpBar.setPosition(p - Vector2f(0, 5));
+	hpBar.setFillColor(Color::Red);
 }
 
-std::shared_ptr<Projectile> Aya::shoot(Vector2f playerPosition)
-{
-	std::shared_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + character.getSize()/2.f, playerPosition));
-	return cproj;
-}
-
-void Aya::setMoveAnimation(Texture &t, float speed)
+void Aya::setMoveAnimation(const Texture &t, float speed)
 {
 	left = Animation(t, 0, 40, 4, 32, 40, speed);
 	right = Animation(t, 128, 40, 4, 32, 40, speed);
@@ -28,7 +27,7 @@ void Aya::setMoveAnimation(Texture &t, float speed)
 	down = Animation(t, 128, 0, 4, 32, 40, speed);
 }
 
-void Aya::setAttackAnimation(Texture &t, float speed)
+void Aya::setAttackAnimation(const Texture &t, float speed)
 {
 	leftAttack = Animation(t, 128, 120, 6, 32, 40, speed);
 	rightAttack = Animation(t, 64, 160, 6, 32, 40, speed);

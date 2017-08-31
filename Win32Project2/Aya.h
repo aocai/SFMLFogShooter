@@ -9,8 +9,7 @@ class Aya :
 	public Enemy
 {
 public:
-	std::shared_ptr<Projectile> shoot(Vector2f) override;
 	Aya(Vector2f);
-	void setMoveAnimation(Texture&, float) override;
-	void setAttackAnimation(Texture&, float) override;
+	void setMoveAnimation(const Texture&, float) override;
+	void setAttackAnimation(const Texture&, float) override;
 };

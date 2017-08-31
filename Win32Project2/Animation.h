@@ -12,10 +12,10 @@ private:
 	std::vector<IntRect> frames;
 public:
 	Animation();
-	Animation(Texture&, int, int, int, int, int, float);
+	Animation(const Texture&, int, int, int, int, int, float);
 	void update();
 	void setPosition(Vector2f);
 	Sprite* getSprite();
 	void resetFrame();
-	bool isOver();
+	bool isOver() const;
 };
