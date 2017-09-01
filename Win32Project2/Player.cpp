@@ -34,6 +34,11 @@ void Player::setRangeAnimation(const Texture &t, float speed)
 	rangeAnimation = Animation(t, 128, 320, 4, 32, 48, speed);
 }
 
+void Player::setRangeAnimation2(const Texture &t, float speed)
+{
+	rangeAnimation2 = Animation(t, 128, 280, 6, 32, 40, speed);
+}
+
 void Player::setCurrentAnimation(int i)
 {
 	if (i == 0 && i != currentAni)
@@ -96,7 +101,7 @@ void Player::updateAnimation()
 	currentAnimation->update();
 	if (currentAni >= 4 && currentAnimation->isOver())
 	{
-		shoot(target);
+		shootStraight(target);
 		setCurrentAnimation(currentAni - 4);
 	}
 }
@@ -116,13 +121,20 @@ Sprite* Player::getSprite()
 	return currentAnimation->getSprite();
 }
 
-void Player::shoot(Vector2f p)
+void Player::shootStraight(Vector2f p)
 {
-	std::unique_ptr<Projectile> cproj(new CircleProjectile(getPosition() + Vector2f(16, 20), p));
+	std::unique_ptr<Projectile> cproj = std::make_unique<StraightProjectile>(getPosition() + Vector2f(16, 20), p, Vector2f(14,40));
 	Vector2f v = p - (getPosition() + Vector2f(16, 20));
 	Vector2f w(0, -1);
 	float angle = atan2(determinant(v, w), dotProduct(v, w)) * 180.0 / 3.14159265;
 	cproj->setAnimation(rangeAnimation, -angle);
+	playerProjectiles.emplace_back(std::move(cproj));
+}
+
+void Player::shootSpiral()
+{
+	std::unique_ptr<Projectile> cproj = std::make_unique<SpiralProjectile>(getPosition() + Vector2f(16, 20), 8.f);
+	cproj->setAnimation(rangeAnimation2, 0);
 	playerProjectiles.emplace_back(std::move(cproj));
 }
 
@@ -158,8 +170,7 @@ void Player::drawProjectile(RenderWindow &window) const
 {
 	for (const auto &p : playerProjectiles)
 	{
-		window.draw(*(p->getProjectile()));
-		window.draw(*(p->getSprite()));
+		p->draw(window);
 	}
 }
 
@@ -256,15 +267,19 @@ void Player::calcProjCollision(const std::vector<std::unique_ptr<Enemy>> &e)
 {
 	for (int i = 0; i < playerProjectiles.size(); ++i)
 	{
-		FloatRect projBound = playerProjectiles[i]->getProjectile()->getGlobalBounds();
 		for (auto& enemy : e)
 		{
-			if (projBound.intersects(enemy->getBounds()))
+			float dealt = 0;
+			dealt = playerProjectiles[i]->projDamageCalc(enemy->getBounds());
+			if (dealt > 0)
 			{
-				enemy->takeDamage(10.f);
-				playerProjectiles.erase(playerProjectiles.begin() + i);
-				--i;
-				break;
+				enemy->takeDamage(dealt);
+				if (playerProjectiles[i]->isOver())
+				{
+					playerProjectiles.erase(playerProjectiles.begin() + i);
+					--i;
+					break;
+				}
 			}
 		}
 	}

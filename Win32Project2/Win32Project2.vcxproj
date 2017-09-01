@@ -159,7 +159,8 @@
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Projectile.cpp" />
-    <ClCompile Include="CircleProjectile.cpp" />
+    <ClCompile Include="SpiralProjectile.cpp" />
+    <ClCompile Include="StraightProjectile.cpp" />
     <ClCompile Include="Cirno.cpp" />
     <ClCompile Include="Sakuya.cpp" />
     <ClCompile Include="Suika.cpp" />
@@ -169,7 +170,8 @@
     <ClInclude Include="Animation.h" />
     <ClInclude Include="Aya.h" />
     <ClInclude Include="Enemy.h" />
-    <ClInclude Include="CircleProjectile.h" />
+    <ClInclude Include="SpiralProjectile.h" />
+    <ClInclude Include="StraightProjectile.h" />
     <ClInclude Include="AStar.h" />
     <ClInclude Include="Sakuya.h" />
     <ClInclude Include="Player.h" />

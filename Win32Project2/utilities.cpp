@@ -28,5 +28,6 @@ void updateMapMatrix(std::vector<double> &mapMatrix, Vector2f topLeft, Vector2f 
 
 Vector2f rotateVector2f(Vector2f v, double angle)
 {
-	return Vector2f(v.x * cos(angle) + v.y * (-sin(angle)), v.x * sin(angle) + v.y * cos(angle));
+	angle = angle * 3.141592 / 180;
+	return Vector2f(v.x * std::cos(angle) + v.y * (-std::sin(angle)), v.x * std::sin(angle) + v.y * std::cos(angle));
 }

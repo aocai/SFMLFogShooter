@@ -1,7 +1,5 @@
 #pragma once
 #include "Enemy.h"
-#include "Projectile.h"
-#include "CircleProjectile.h"
 
 class Suika :
 	public Enemy

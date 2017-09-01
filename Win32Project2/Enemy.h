@@ -46,7 +46,7 @@ public:
 
 	Enemy() = default;
 	virtual ~Enemy() = default;
-	Enemy(Enemy&&) = default; //TODO deep copy for *currrentAnimation
+	Enemy(Enemy &&e) = default; //todo deepcopy
 	Enemy& operator=(Enemy&&) = default;
 	Enemy(const Enemy&) = default;
 	Enemy& operator=(const Enemy&) = default;

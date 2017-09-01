@@ -224,7 +224,7 @@ bool Enemy::ranged() const
 
 bool Enemy::inRange(Vector2f v) const
 {
-	return magnitude(v - character.getPosition()) < 200.f;
+	return magnitude(v - character.getPosition()) < 300.f;
 }
 
 void Enemy::meleeAttack(Vector2f v)
@@ -262,8 +262,6 @@ void Enemy::rangeAttack(Vector2f v)
 {
 	if (range && currentAni < 4)
 	{
-		//setCurrentAnimation(currentAni + 4);
-		//target = v;
 		moveState = 1;
 
 		v -= (character.getPosition() + Vector2f(16, 20));
@@ -319,8 +317,7 @@ void Enemy::drawProjectiles(RenderWindow &window) const
 {
 	for (const auto &p : enemyProjectile)
 	{
-		window.draw(*(p->getProjectile()));
-		window.draw(*(p->getSprite()));
+		p->draw(window);
 	}
 }
 
@@ -328,11 +325,16 @@ void Enemy::calcProjCollision(const Player &player)
 {
 	for (size_t i = 0; i < enemyProjectile.size(); ++i)
 	{
-		if (enemyProjectile[i]->getProjectile()->getGlobalBounds().intersects(player.getBounds()))
+		float dealt = 0;
+		dealt = enemyProjectile[i]->projDamageCalc(player.getBounds());
+		if (dealt > 0)
 		{
-			player.takeDamage(10.f);
-			enemyProjectile.erase(enemyProjectile.begin() + i);
-			--i;
+			player.takeDamage(dealt);
+			if (enemyProjectile[i]->isOver())
+			{
+				enemyProjectile.erase(enemyProjectile.begin() + i);
+				--i;
+			}
 		}
 	}
 }

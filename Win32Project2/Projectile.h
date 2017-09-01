@@ -6,15 +6,25 @@ using namespace sf;
 
 class Projectile
 {
+protected:
+	Vector2f position;
+	Vector2f velocity;
+	Animation animation;
+	float dmg;
+	bool over;
 public:
 	virtual void setAnimation(const Texture&, float) = 0;
 	virtual void setAnimation(const Animation&, float) = 0;
-	virtual Shape* getProjectile() = 0;
-	virtual bool updateProjectile() = 0;
-	virtual Sprite* getSprite() = 0;
+	virtual Sprite* getSprite();
 
-	virtual void updateAnimation() = 0;
-	virtual void updateSpritePosition() = 0;
+	virtual bool updateProjectile() = 0;
+	virtual void updateAnimation();
+	virtual void updateSpritePosition();
+
+	virtual float projDamageCalc(const FloatRect&) = 0;
+	bool isOver() const;
+
+	virtual void draw(RenderWindow &window) = 0;
 
 	Projectile() = default;
 	virtual ~Projectile() = default;

@@ -842,8 +842,6 @@ int main()
 	walls.push_back(rect5);
 	updateMapMatrix(mapMatrix, rect5.getPosition(), rect5.getPosition() + rect5.getSize(), -1);
 
-	//std::vector<std::shared_ptr<Projectile>> allProjectiles;
-
 	Player player(Vector2f(32,40), Vector2f(windowWidth / 2.f, windowHeight / 2.f));
 
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
@@ -855,29 +853,31 @@ int main()
 	Texture flandreTexture;
 	Texture sakuyaTexture;
 	Texture suikaTexture;
+	Texture daiyouseiTexture;
 	ayaTexture.loadFromFile("sprites\\Aya Shameimaru.png");
 	cirnoTexture.loadFromFile("sprites\\Cirno.png");
 	flandreTexture.loadFromFile("sprites\\Flandre Scarlet.png");
 	sakuyaTexture.loadFromFile("sprites\\Sakuya Izayoi.png");
 	suikaTexture.loadFromFile("sprites\\Suika Ibuki.png");
+	daiyouseiTexture.loadFromFile("sprites\\Daiyousei.png");
 
-	std::unique_ptr<Enemy> aya(new Aya(Vector2f(1000, 20)));
+	std::unique_ptr<Enemy> aya = std::make_unique<Aya>(Vector2f(1000, 20));
 	aya->setMoveAnimation(ayaTexture, 0.1f);
 	aya->setAttackAnimation(ayaTexture, 0.15f);
 	enemyVector.push_back(std::move(aya));
 
-	std::unique_ptr<Enemy> cirno(new Cirno(Vector2f(20, 20)));
+	std::unique_ptr<Enemy> cirno = std::make_unique<Cirno>(Vector2f(20, 20));
 	cirno->setMoveAnimation(cirnoTexture, 0.1f);
 	cirno->setAttackAnimation(cirnoTexture, 0.15f);
 	enemyVector.push_back(std::move(cirno));
 
-	std::unique_ptr<Enemy> sakuya(new Sakuya(Vector2f(1000, 500)));
+	std::unique_ptr<Enemy> sakuya = std::make_unique<Sakuya>(Vector2f(1000, 500));
 	sakuya->setMoveAnimation(sakuyaTexture, 0.1f);
 	sakuya->setAttackAnimation(sakuyaTexture, 0.1f);
 	sakuya->setRangeAnimation(sakuyaTexture, 0.1f);
 	enemyVector.push_back(std::move(sakuya));
 
-	std::unique_ptr<Enemy> suika(new Suika(Vector2f(500, 450)));
+	std::unique_ptr<Enemy> suika = std::make_unique<Suika>(Vector2f(500, 450));
 	suika->setMoveAnimation(suikaTexture, 0.1f);
 	suika->setAttackAnimation(suikaTexture, 0.15f);
 	enemyVector.push_back(std::move(suika));
@@ -885,6 +885,7 @@ int main()
 	player.setMoveAnimation(flandreTexture, 0.1f);
 	player.setAttackAnimation(flandreTexture, 0.15f);
 	player.setRangeAnimation(flandreTexture, 0.1f);
+	player.setRangeAnimation2(daiyouseiTexture, 0.1f);
 	player.getSprite()->setPosition(player.getPosition());
 	
 	std::vector<int> dirtyWalls(walls.size(), 0);
@@ -974,6 +975,10 @@ int main()
 			Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
 			player.rangeAttack(mouseV);
 		}
+		if (Keyboard::isKeyPressed(Keyboard::Z))
+		{
+			player.shootSpiral();
+		}
 
 		player.updateAnimation();
 		player.updatePosition();
@@ -988,7 +993,7 @@ int main()
 		//get vector from player position to mouse position
 		if (playerPosition == mouseCoord)
 			mouseCoord = lastMousePosition;
-		PQ = playerPosition - lastMousePosition;
+		PQ = lastMousePosition - playerPosition;
 
 		//mouse position too close to player position. project mouse position onto surface of circle
 		if (magnitude(PQ) < 50)
@@ -996,8 +1001,8 @@ int main()
 		lastMousePosition = mouseCoord;
 
 		//get the left and right vectors of the player view area (left and right LOS arms) by rotating vector PQ by 15 degrees
-		Vector2f rightArm = rotateVector2f(PQ, 15) * 100.0f;
-		Vector2f leftArm = rotateVector2f(PQ, -15) * 100.0f;
+		Vector2f rightArm = rotateVector2f(PQ, 35) * 100.0f;
+		Vector2f leftArm = rotateVector2f(PQ, -35) * 100.0f;
 
 		//get los ConvexShapes
 		std::vector<ConvexShape> los = clipLOS(playerPosition, lastMousePosition, leftArm, rightArm);
@@ -1057,7 +1062,6 @@ int main()
 
 				enemyVector[i]->updateAnimation(player);
 				enemyVector[i]->updateSpritePosition();
-
 				enemyVector[i]->drawEnemy(window);
 			}
 		}

@@ -21,7 +21,7 @@ Sakuya::Sakuya(Vector2f p)
 
 void Sakuya::shoot(Vector2f p)
 {
-	std::unique_ptr<Projectile> cproj(new CircleProjectile(character.getPosition() + Vector2f(16, 20), p));
+	std::unique_ptr<Projectile> cproj = std::make_unique<StraightProjectile>(character.getPosition() + Vector2f(16, 20), p, Vector2f(32,20));
 	Vector2f v = p - (character.getPosition() + Vector2f(16, 20));
 	Vector2f w(0, -1);
 	float angle = atan2(determinant(v, w), dotProduct(v, w)) * 180.0 / 3.14159265;
@@ -56,7 +56,6 @@ void Sakuya::updateAnimation(const Player &player)
 	currentAnimation->update();
 	if (currentAni >= 4 && currentAnimation->isOver())
 	{
-		//shoot(target);
 		shoot(player.getPosition() + player.getSize() / 2.f);
 		setCurrentAnimation(currentAni - 4);
 	}

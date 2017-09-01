@@ -1,7 +1,7 @@
 #pragma once
 #include "Enemy.h"
 #include "Projectile.h"
-#include "CircleProjectile.h"
+#include "StraightProjectile.h"
 
 class Sakuya :
 	public Enemy

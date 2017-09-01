@@ -1,9 +1,5 @@
 #pragma once
 #include "Enemy.h"
-#include <stack>
-#include "Projectile.h"
-#include "CircleProjectile.h"
-#include "AStar.h";
 
 class Aya :
 	public Enemy

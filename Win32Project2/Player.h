@@ -2,7 +2,8 @@
 #include <SFML/Graphics.hpp>
 #include <memory>
 #include "Projectile.h"
-#include "CircleProjectile.h"
+#include "StraightProjectile.h"
+#include "SpiralProjectile.h"
 #include "Animation.h"
 
 using namespace sf;
@@ -29,6 +30,7 @@ private:
 	std::vector<std::unique_ptr<Projectile>> playerProjectiles;
 	
 	Animation rangeAnimation;
+	Animation rangeAnimation2;
 
 	mutable float hp;
 	mutable RectangleShape hpBar;
@@ -37,13 +39,15 @@ public:
 	void setMoveAnimation(const Texture &t, float speed);
 	void setAttackAnimation(const Texture &t, float speed);
 	void setRangeAnimation(const Texture &t, float speed);
+	void setRangeAnimation2(const Texture &t, float speed);
 	void setCurrentAnimation(int i);
 	void updatePosition();
 	void updateAnimation();
 	Vector2f getPosition() const;
 	Vector2f getSize() const;
 	Sprite* getSprite();
-	void shoot(Vector2f p);
+	void shootStraight(Vector2f p);
+	void shootSpiral();
 	FloatRect getBounds() const;
 	void draw(RenderWindow &window) const;
 	void updateProjectile();
