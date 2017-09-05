@@ -1,6 +1,6 @@
 #include "SpiralProjectile.h"
 
-SpiralProjectile::SpiralProjectile(Vector2f p, float size) : center{ p }, hitboxes(18)
+SpiralProjectile::SpiralProjectile(Vector2f p, float size) : hitboxes(18)
 {
 	position = p;
 	velocity = Vector2f(0, -5);
@@ -29,7 +29,9 @@ float SpiralProjectile::projDamageCalc(const FloatRect &bound)
 		}
 	}
 	if (hitboxes.empty())
+	{
 		over = true;
+	}
 	return count * dmg;
 }
 
@@ -59,7 +61,10 @@ bool SpiralProjectile::updateProjectile()
 		}
 	}
 	if (hitboxes.empty())
+	{
+		over = true;
 		return false;
+	}
 	return true;
 }
 

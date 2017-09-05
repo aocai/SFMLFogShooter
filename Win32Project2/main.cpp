@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Network.hpp>
 #include <vector>
 #include <stack>
 #include "main.h"
@@ -788,18 +789,172 @@ std::vector<ConvexShape> checkShadow(std::vector<RectangleShape> walls, Vector2f
 	return fog;
 }
 
-int main()
+
+const unsigned short PORT = 5000;
+const std::string ipAddress = "174.6.144.24";
+sf::TcpSocket socket;
+
+
+void server()
 {
-	windowWidth = 1280.f;
-	windowHeight = 720.f;
+	std::cout << "server running..." << std::endl;
+	sf::TcpListener listener;
+	std::cout << "accepting socket on port " << PORT << std::endl;
+	listener.listen(PORT);
+	listener.accept(socket);
+	std::cout << "socket accepted on ip " << socket.getRemoteAddress().toString() << std::endl;
+}
 
-	std::vector<double> mapMatrix((windowWidth /10) * (windowHeight/10), 1);
+bool client()
+{
+	auto ip = sf::IpAddress::getLocalAddress();
+	std::cout << ip.toString() << std::endl;
+	auto result = socket.connect(ip, PORT);
+	std::cout << result << std::endl;
+	if (result == sf::Socket::Done)
+	{
+		std::cout << "ran" << std::endl;
+		return true;
+	}
+	std::cout << "did not run" << std::endl;
+	return false;
+}
+
+struct myPacket
+{
+	Vector2f movement;
+};
+
+
+Vector2f p2Movement{ 0, 0 };
+
+void receivemsg()
+{
+	while (true)
+	{
+		sf::Packet packet;
+		std::cout << "receiving packet" << std::endl;
+		socket.receive(packet);
+		if (packet.endOfPacket())
+		{
+			std::cout << "empty packet!" << std::endl;
+		}
+		else
+		{
+			const myPacket *p = static_cast<const myPacket*>(packet.getData());
+			p2Movement = p->movement;
+		}
+	}
+}
+
+
+void sendSocketMessage(Vector2f message)
+{
+	sf::Packet packet;
+	myPacket p{ message };
+	packet.append(&p, sizeof(myPacket));
+	
+	while (socket.send(packet) == sf::Socket::Partial);
+}
+
+void PlayerGameplay(RenderWindow &window)
+{
+	Texture ayaTexture;
+	Texture cirnoTexture;
+	Texture flandreTexture;
+	Texture sakuyaTexture;
+	Texture suikaTexture;
+	Texture daiyouseiTexture;
+	ayaTexture.loadFromFile("sprites\\Aya Shameimaru.png");
+	cirnoTexture.loadFromFile("sprites\\Cirno.png");
+	flandreTexture.loadFromFile("sprites\\Flandre Scarlet.png");
+	sakuyaTexture.loadFromFile("sprites\\Sakuya Izayoi.png");
+	suikaTexture.loadFromFile("sprites\\Suika Ibuki.png");
+	daiyouseiTexture.loadFromFile("sprites\\Daiyousei.png");
+
+	Player player(Vector2f(32, 40), Vector2f(200, windowHeight / 2.f));
+	player.setMoveAnimation(flandreTexture, 0.1f);
+	player.setAttackAnimation(flandreTexture, 0.15f);
+	player.setRangeAnimation(flandreTexture, 0.1f);
+	player.setRangeAnimation2(daiyouseiTexture, 0.1f);
+	player.getSprite()->setPosition(player.getPosition());
+
+	Player player2(Vector2f(32, 40), Vector2f(1000, windowHeight / 2.f));
+	player2.setMoveAnimation(flandreTexture, 0.1f);
+	player2.setAttackAnimation(flandreTexture, 0.15f);
+	player2.setRangeAnimation(flandreTexture, 0.1f);
+	player2.setRangeAnimation2(daiyouseiTexture, 0.1f);
+	player2.getSprite()->setPosition(player2.getPosition());
+	
+	
+	std::vector<RectangleShape> walls;
+
+	while (window.isOpen())
+	{
+		Vector2f playerVelocity(0, 0);
+		//Player Movement
+		if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
+			playerVelocity.x -= 3.f;
+		if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
+			playerVelocity.x += 3.f;
+		if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
+			playerVelocity.y -= 3.f;
+		if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
+			playerVelocity.y += 3.f;
+		if (magnitude(playerVelocity) > 0)
+		{
+			player.move(playerVelocity, walls);
+			sendSocketMessage(playerVelocity);
+		}
+
+		player2.move(p2Movement, walls);
+
+		player.updateAnimation();
+		player.updatePosition();
+
+		player2.updateAnimation();
+		player2.updatePosition();
+
+		window.clear(Color::White);
+
+		player.draw(window);
+		player2.draw(window);
+		window.display();
+	}
+}
+
+
+void ConnectionWaiting(RenderWindow &window)
+{
+	auto serverThread = new sf::Thread(&server);
+	serverThread->launch();
+
+	auto receiveThread = new sf::Thread(&receivemsg);
+	receiveThread->launch();
+
+	sf::Font font;
+	font.loadFromFile("LLPIXEL3.ttf");
+
+	sf::Text connectingText;
+	connectingText.setString("Waiting for connection...");
+	connectingText.setColor(Color::Black);
+	connectingText.setFont(font);
+	connectingText.setOrigin(Vector2f(connectingText.getGlobalBounds().width / 2.f, connectingText.getGlobalBounds().height / 2.f));
+	connectingText.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+
+
+	window.clear(Color::White);
+	window.draw(connectingText);
+	window.display();
+	serverThread->wait();
+	PlayerGameplay(std::ref(window));
+}
+
+
+void AIGameplay(RenderWindow &window)
+{
+	std::vector<double> mapMatrix((windowWidth / 10) * (windowHeight / 10), 1);
 	std::vector<int> workVector((windowWidth / 10) * (windowHeight / 10), 0);
-
-	ContextSettings settings;
-	settings.antialiasingLevel = 8;
-	RenderWindow window(VideoMode(windowWidth, windowHeight), "FogShooter", Style::Default, settings);
-	window.setFramerateLimit(60);
 
 	Clock clock;
 	float pathTime = clock.getElapsedTime().asSeconds();
@@ -808,8 +963,8 @@ int main()
 
 	//create the walls
 	RectangleShape rect1;
-	rect1.setSize(Vector2f(80,220));
-	rect1.setPosition(Vector2f(120,110));
+	rect1.setSize(Vector2f(80, 220));
+	rect1.setPosition(Vector2f(120, 110));
 	rect1.setFillColor(Color::Black);
 	walls.push_back(rect1);
 	updateMapMatrix(mapMatrix, rect1.getPosition(), rect1.getPosition() + rect1.getSize(), -1);
@@ -842,7 +997,7 @@ int main()
 	walls.push_back(rect5);
 	updateMapMatrix(mapMatrix, rect5.getPosition(), rect5.getPosition() + rect5.getSize(), -1);
 
-	Player player(Vector2f(32,40), Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+	Player player(Vector2f(32, 40), Vector2f(windowWidth / 2.f, windowHeight / 2.f));
 
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
@@ -887,7 +1042,7 @@ int main()
 	player.setRangeAnimation(flandreTexture, 0.1f);
 	player.setRangeAnimation2(daiyouseiTexture, 0.1f);
 	player.getSprite()->setPosition(player.getPosition());
-	
+
 	std::vector<int> dirtyWalls(walls.size(), 0);
 	size_t currentWall = walls.size();
 	float deltaX;
@@ -936,7 +1091,7 @@ int main()
 			//free current wall in mapMatrix if not already done so
 			if (dirtyWalls[currentWall] == 0)
 				updateMapMatrix(mapMatrix, walls[currentWall].getPosition(), walls[currentWall].getPosition() + wallSize, 1);
-			
+
 			//move wall to new mouse position
 			float posX = window.mapPixelToCoords(Mouse::getPosition(window)).x - deltaX;
 			float posY = window.mapPixelToCoords(Mouse::getPosition(window)).y - deltaY;
@@ -978,6 +1133,11 @@ int main()
 		if (Keyboard::isKeyPressed(Keyboard::Z))
 		{
 			player.shootSpiral();
+		}
+		if (Keyboard::isKeyPressed(Keyboard::X))
+		{
+			Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
+			player.shootExpand(mouseV);
 		}
 
 		player.updateAnimation();
@@ -1101,6 +1261,72 @@ int main()
 		if (player.getCurrentHP() <= 0)
 			window.close();
 
+		window.display();
+	}
+}
+
+
+int main()
+{
+	windowWidth = 1280.f;
+	windowHeight = 720.f;
+
+	ContextSettings settings;
+	settings.antialiasingLevel = 8;
+	RenderWindow window(VideoMode(windowWidth, windowHeight), "FogShooter", Style::Default, settings);
+	window.setFramerateLimit(60);
+
+	RectangleShape menu1;
+	menu1.setSize(Vector2f(200, 50));
+	menu1.setOrigin(menu1.getSize() / 2.f);
+	menu1.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+	menu1.setFillColor(Color::White);
+
+	sf::Font font;
+	font.loadFromFile("LLPIXEL3.ttf");
+
+	sf::Text menu1Text;
+	menu1Text.setString("VS AI");
+	menu1Text.setColor(Color::Black);
+	menu1Text.setFont(font);
+	menu1Text.setOrigin(Vector2f(menu1Text.getGlobalBounds().width / 2.f, menu1Text.getGlobalBounds().height / 2.f));
+	menu1Text.setPosition(menu1.getPosition());
+
+	RectangleShape menu2;
+	menu2.setSize(Vector2f(200, 50));
+	menu2.setOrigin(menu2.getSize() / 2.f);
+	menu2.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f) + 2.f * Vector2f(0, menu1.getSize().y));
+	menu2.setFillColor(Color::White);
+
+	sf::Text menu2Text;
+	menu2Text.setString("VS Player");
+	menu2Text.setColor(Color::Black);
+	menu2Text.setFont(font);
+	menu2Text.setOrigin(Vector2f(menu2Text.getGlobalBounds().width / 2.f, menu2Text.getGlobalBounds().height / 2.f));
+	menu2Text.setPosition(menu2.getPosition());
+
+	while (window.isOpen())
+	{
+		if (Mouse::isButtonPressed(Mouse::Left))
+		{
+			auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+			if (menu1.getGlobalBounds().contains(mousePos))
+			{
+				window.setActive(false);
+				AIGameplay(std::ref(window));
+				break;
+			}
+			else if (menu2.getGlobalBounds().contains(mousePos))
+			{
+				window.setActive(false);
+				ConnectionWaiting(std::ref(window));
+				break;
+			}
+		}
+		window.draw(menu1);
+		window.draw(menu1Text);
+		window.draw(menu2);
+		window.draw(menu2Text);
 		window.display();
 	}
 

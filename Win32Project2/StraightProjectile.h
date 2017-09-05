@@ -9,7 +9,6 @@ private:
 	RectangleShape hitbox;
 public:
 	StraightProjectile(Vector2f, Vector2f, Vector2f);
-	//Shape* getProjectile() override;
 	float projDamageCalc(const FloatRect&) override;
 	void setAnimation(const Texture&, float) override;
 	void setAnimation(const Animation&, float) override;

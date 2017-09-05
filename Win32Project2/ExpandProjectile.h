@@ -2,13 +2,17 @@
 #include "Projectile.h"
 #include "utilities.h"
 
-class SpiralProjectile
+class ExpandProjectile
 	: public Projectile
 {
 private:
-	std::vector<CircleShape> hitboxes;
+	CircleShape hitbox;
+	Vector2f initialPosition;
+	float finalSize;
+	float totalDistance;
+	Vector2f scaling;
 public:
-	SpiralProjectile(Vector2f, float);
+	ExpandProjectile(Vector2f, Vector2f, float, float);
 	float projDamageCalc(const FloatRect&) override;
 	void setAnimation(const Texture&, float) override;
 	void setAnimation(const Animation&, float) override;

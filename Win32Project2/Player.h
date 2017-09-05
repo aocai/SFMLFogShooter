@@ -4,6 +4,7 @@
 #include "Projectile.h"
 #include "StraightProjectile.h"
 #include "SpiralProjectile.h"
+#include "ExpandProjectile.h"
 #include "Animation.h"
 
 using namespace sf;
@@ -48,6 +49,7 @@ public:
 	Sprite* getSprite();
 	void shootStraight(Vector2f p);
 	void shootSpiral();
+	void shootExpand(Vector2f);
 	FloatRect getBounds() const;
 	void draw(RenderWindow &window) const;
 	void updateProjectile();

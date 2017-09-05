@@ -43,6 +43,7 @@ bool StraightProjectile::updateProjectile()
 	//check for bounds
 	if (position.x < 0 || position.x > 1280 || position.y < 0 || position.y > 720)
 	{
+		over = true;
 		return false;
 	}
 	hitbox.move(velocity);

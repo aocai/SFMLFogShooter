@@ -138,6 +138,13 @@ void Player::shootSpiral()
 	playerProjectiles.emplace_back(std::move(cproj));
 }
 
+void Player::shootExpand(Vector2f p)
+{
+	std::unique_ptr<Projectile> cproj = std::make_unique<ExpandProjectile>(getPosition() + Vector2f(16, 20), p, 5.f, 30.f);
+	cproj->setAnimation(rangeAnimation2, 0);
+	playerProjectiles.emplace_back(std::move(cproj));
+}
+
 FloatRect Player::getBounds() const
 {
 	return player.getGlobalBounds();
