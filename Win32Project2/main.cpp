@@ -797,6 +797,11 @@ const std::string ipAddress = "174.6.144.24";
 sf::TcpSocket tcpsocket;
 bool connected = false;
 
+int counter = 0;
+int counter2 = 0;
+std::queue<std::string> packetQueue;
+sf::Font font;
+
 class ReuseableListener : public sf::TcpListener
 {
 public:
@@ -814,9 +819,7 @@ public:
 
 void server()
 {
-	auto ip = sf::IpAddress::getLocalAddress();
-	std::cout << "server running... IP is " << ip.toString() << std::endl;
-	//sf::TcpListener listener;
+	std::cout << "server running... IP is " << sf::IpAddress::getLocalAddress().toString() << std::endl;
 	static ReuseableListener listener;
 	std::cout << "accepting socket on port " << PORT << std::endl;
 	listener.close();
@@ -826,16 +829,10 @@ void server()
 		std::cout << "socket accepted on ip " << tcpsocket.getRemoteAddress().toString() << std::endl;
 		connected = true;
 	}
-	//while (listener.accept(socket) != sf::Socket::Done)
-	//{
-	//	std::cout << "Socket not connecting. Trying again..." << std::endl;
-	//}
 }
 
 void client(std::string ipAddr)
 {
-	//auto ip = sf::IpAddress::getLocalAddress();
-	//std::cout << ip.toString() << std::endl;
 	auto ip = sf::IpAddress(ipAddr);
 	while (tcpsocket.connect(ip, PORT) != sf::Socket::Done)
 	{
@@ -844,26 +841,13 @@ void client(std::string ipAddr)
 	connected = true;
 }
 
-bool oldMovement = true;
-Vector2f p2Movement{ 0,0 };
-
-int counter = 0;
-int counter2 = 0;
-
-std::queue<std::string> packetQueue;
-
 void receivemsg()
 {
 	while (connected)
 	{
 		sf::Packet packet;
-		//std::cout << "receiving packet" << std::endl;
 		tcpsocket.receive(packet);
-		if (packet.endOfPacket())
-		{
-			//std::cout << "empty packet!" << std::endl;
-		}
-		else
+		if (!packet.endOfPacket())
 		{
 			string s;
 			packet >> s;
@@ -911,17 +895,6 @@ void processPacketQueue(Player &p)
 				y += *i;
 			}
 			Vector2f newMovement{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) };
-			/*
-			if (!oldMovement)
-			{
-				p2Movement += newMovement;
-			}
-			else
-			{
-				p2Movement = newMovement;
-				oldMovement = false;
-			}
-			*/
 			p.move(newMovement,walls);
 		}
 		else if (code == "PROJECTILE_NORMAL")
@@ -965,6 +938,56 @@ void processPacketQueue(Player &p)
 	}
 }
 
+void GameOverScreen(RenderWindow &window, std::string str)
+{
+	sf::Text gameOverText;
+	gameOverText.setString("Game Over!");
+	gameOverText.setColor(Color::Black);
+	gameOverText.setFont(font);
+	gameOverText.setOrigin(Vector2f(gameOverText.getGlobalBounds().width / 2.f, gameOverText.getGlobalBounds().height / 2.f));
+	gameOverText.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+
+	sf::Text resultText;
+	resultText.setString(str);
+	resultText.setColor(Color::Black);
+	resultText.setFont(font);
+	resultText.setOrigin(Vector2f(resultText.getGlobalBounds().width / 2.f, resultText.getGlobalBounds().height / 2.f));
+	resultText.setPosition(gameOverText.getPosition() + Vector2f(0, 50));
+
+	sf::Text returnText;
+	returnText.setString("Return");
+	returnText.setColor(Color::Black);
+	returnText.setFont(font);
+	returnText.setOrigin(Vector2f(returnText.getGlobalBounds().width / 2.f, returnText.getGlobalBounds().height / 2.f));
+	returnText.setPosition(resultText.getPosition() + Vector2f(0,50));
+
+	while (window.isOpen())
+	{
+		Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == Event::Closed)
+				window.close();
+			if (event.type == sf::Event::MouseButtonReleased)
+			{
+				if (event.mouseButton.button == sf::Mouse::Left)
+				{
+					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+					if (returnText.getGlobalBounds().contains(mousePos))
+					{
+						return;
+					}
+				}
+			}
+		}
+		window.clear(Color::White);
+		window.draw(gameOverText);
+		window.draw(resultText);
+		window.draw(returnText);
+		window.display();
+	}
+}
+
 void PlayerGameplay(RenderWindow &window)
 {
 	auto receiveThread = std::make_unique<sf::Thread>(&receivemsg);
@@ -997,7 +1020,6 @@ void PlayerGameplay(RenderWindow &window)
 	player2.setRangeAnimation2(daiyouseiTexture, 0.1f);
 	player2.getSprite()->setPosition(player2.getPosition());
 	
-	
 	std::vector<RectangleShape> walls;
 
 	bool pause = false;
@@ -1013,6 +1035,20 @@ void PlayerGameplay(RenderWindow &window)
 				pause = true;
 			if (event.type == Event::GainedFocus)
 				pause = false;
+		}
+		
+		if (player.getCurrentHP() <= 0)
+		{
+			//window.setActive(false);
+			GameOverScreen(std::ref(window), "You Lose!");
+			receiveThread->terminate();
+			return;
+		}
+		else if (player2.getCurrentHP() <= 0)
+		{
+			GameOverScreen(std::ref(window), "You Win!");
+			receiveThread->terminate();
+			return;
 		}
 
 		if (!pause)
@@ -1063,15 +1099,16 @@ void PlayerGameplay(RenderWindow &window)
 		player.updatePosition();
 
 		processPacketQueue(player2);
+
 		player2.updateAnimation();
-		/*
-		if (!oldMovement)
-		{
-			player2.move(p2Movement, walls);
-			oldMovement = true;
-		}
-		*/
 		player2.updatePosition();
+
+		float dmg;
+		dmg = player.calcProjCollision(player2.getBounds());
+		player2.takeDamage(dmg);
+
+		dmg = player2.calcProjCollision(player.getBounds());
+		player.takeDamage(dmg);
 
 		window.clear(Color::White);
 
@@ -1084,15 +1121,13 @@ void PlayerGameplay(RenderWindow &window)
 		player2.drawProjectile(window);
 		window.display();
 	}
+	receiveThread->terminate();
 }
 
 void CreateRoom(RenderWindow &window)
 {
 	auto serverThread = std::make_unique<sf::Thread>(&server);
 	serverThread->launch();
-
-	sf::Font font;
-	font.loadFromFile("LLPIXEL3.ttf");
 
 	auto ip = sf::IpAddress::getLocalAddress().toString();
 
@@ -1153,18 +1188,15 @@ void CreateRoom(RenderWindow &window)
 		window.draw(backText);
 		window.display();
 	}
-	//serverThread->wait();
-	window.setActive(false);
+	serverThread->wait();
+	//window.setActive(false);
 	PlayerGameplay(std::ref(window));
 }
 
-void ConnectingRoom(RenderWindow &window, std::string ipAddr)
+bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 {
 	auto clientThread = std::make_unique<sf::Thread>(&client, ipAddr);
 	clientThread->launch();
-
-	sf::Font font;
-	font.loadFromFile("LLPIXEL3.ttf");
 
 	sf::Text IPHolder;
 	IPHolder.setString("Connecting to IPAddress");
@@ -1202,7 +1234,7 @@ void ConnectingRoom(RenderWindow &window, std::string ipAddr)
 					if (backText.getGlobalBounds().contains(mousePos))
 					{
 						clientThread->terminate();
-						return;
+						return false;
 					}
 				}
 			}
@@ -1225,15 +1257,13 @@ void ConnectingRoom(RenderWindow &window, std::string ipAddr)
 	}
 	//serverThread->wait();
 
-	window.setActive(false);
+	//window.setActive(false);
 	PlayerGameplay(std::ref(window));
+	return true;
 }
 
 void JoinRoom(RenderWindow &window)
 {
-	sf::Font font;
-	font.loadFromFile("LLPIXEL3.ttf");
-
 	sf::Text TextPrompt;
 	TextPrompt.setString("Please enter IP to connect...");
 	TextPrompt.setColor(Color::Black);
@@ -1264,7 +1294,7 @@ void JoinRoom(RenderWindow &window)
 
 	std::string ipstring;
 
-	while (!connected)
+	while (window.isOpen())
 	{
 		Event event;
 		while (window.pollEvent(event))
@@ -1282,9 +1312,10 @@ void JoinRoom(RenderWindow &window)
 					}
 					else if (connectText.getGlobalBounds().contains(mousePos))
 					{
-						window.setActive(false);
-						std::cout << ipstring << std::endl;
-						ConnectingRoom(std::ref(window), ipstring);
+						//window.setActive(false);
+						auto result = ConnectingRoom(std::ref(window), ipstring);
+						if (result)
+							return;
 					}
 				}
 			}
@@ -1298,9 +1329,10 @@ void JoinRoom(RenderWindow &window)
 				//if enter pressed...
 				else if (event.text.unicode == 13)
 				{
-					window.setActive(false);
-					std::cout << ipstring << std::endl;
-					ConnectingRoom(std::ref(window), ipstring);
+					//window.setActive(false);
+					auto result = ConnectingRoom(std::ref(window), ipstring);
+					if (result)
+						return;
 				}
 				else if (event.text.unicode < 128)
 				{
@@ -1322,8 +1354,8 @@ void JoinRoom(RenderWindow &window)
 	}
 	//serverThread->wait();
 
-	window.setActive(false);
-	PlayerGameplay(std::ref(window));
+	//window.setActive(false);
+	//PlayerGameplay(std::ref(window));
 }
 
 void AIGameplay(RenderWindow &window)
@@ -1545,9 +1577,6 @@ void AIGameplay(RenderWindow &window)
 		//check shadow ConvexShapes
 		std::vector<ConvexShape> shadow = checkShadow(walls, playerPosition);
 
-		//draw background color
-		window.clear(Color::White);
-
 		//pathfinding
 		if (clock.getElapsedTime().asSeconds() - pathTime > 1)
 		{
@@ -1568,6 +1597,9 @@ void AIGameplay(RenderWindow &window)
 			}
 			pathTime = clock.getElapsedTime().asSeconds();
 		}
+
+		//draw background color
+		window.clear(Color::White);
 
 		//do everything for enemies
 		for (int i = 0; i < enemyVector.size(); ++i)
@@ -1642,7 +1674,6 @@ void AIGameplay(RenderWindow &window)
 
 void startScreen(RenderWindow &window)
 {
-	sf::Font font;
 	font.loadFromFile("LLPIXEL3.ttf");
 
 	sf::Text menu1Text;
@@ -1680,17 +1711,17 @@ void startScreen(RenderWindow &window)
 					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 					if (menu1Text.getGlobalBounds().contains(mousePos))
 					{
-						window.setActive(false);
+						//window.setActive(false);
 						AIGameplay(std::ref(window));
 					}
 					else if (menu2Text.getGlobalBounds().contains(mousePos))
 					{
-						window.setActive(false);
+						//window.setActive(false);
 						CreateRoom(std::ref(window));
 					}
 					else if (menu3Text.getGlobalBounds().contains(mousePos))
 					{
-						window.setActive(false);
+						//window.setActive(false);
 						JoinRoom(std::ref(window));
 					}
 				}
@@ -1716,7 +1747,7 @@ int main()
 	RenderWindow window(VideoMode(windowWidth, windowHeight), "FogShooter", Style::Default, settings);
 	window.setFramerateLimit(60);
 
-	window.setActive(false);
+	//window.setActive(false);
 	startScreen(std::ref(window));
 
 	return 0;

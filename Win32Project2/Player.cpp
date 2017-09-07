@@ -261,7 +261,7 @@ void Player::move(Vector2f v, const std::vector<RectangleShape> &walls)
 
 void Player::takeDamage(float dmg) const
 {
-	hpBar.scale(Vector2f((hp - dmg) / hp, 1));
+	hpBar.scale(Vector2f(std::max(0.f,(hp - dmg)) / hp, 1));
 	hp -= dmg;
 }
 
@@ -276,18 +276,29 @@ void Player::calcProjCollision(const std::vector<std::unique_ptr<Enemy>> &e)
 	{
 		for (auto& enemy : e)
 		{
-			float dealt = 0;
-			dealt = playerProjectiles[i]->projDamageCalc(enemy->getBounds());
-			if (dealt > 0)
+			float dealt = playerProjectiles[i]->projDamageCalc(enemy->getBounds());
+			enemy->takeDamage(dealt);
+			if (playerProjectiles[i]->isOver())
 			{
-				enemy->takeDamage(dealt);
-				if (playerProjectiles[i]->isOver())
-				{
-					playerProjectiles.erase(playerProjectiles.begin() + i);
-					--i;
-					break;
-				}
+				playerProjectiles.erase(playerProjectiles.begin() + i);
+				--i;
+				break;
 			}
 		}
 	}
+}
+
+float Player::calcProjCollision(const sf::FloatRect &bounds)
+{
+	float dmg = 0;
+	for (int i = 0; i < playerProjectiles.size(); ++i)
+	{
+		dmg += playerProjectiles[i]->projDamageCalc(bounds);
+		if (playerProjectiles[i]->isOver())
+		{
+			playerProjectiles.erase(playerProjectiles.begin() + i);
+			--i;
+		}
+	}
+	return dmg;
 }

@@ -59,4 +59,5 @@ public:
 	void takeDamage(float dmg) const;
 	float getCurrentHP() const;
 	void calcProjCollision(const std::vector<std::unique_ptr<Enemy>> &e);
+	float calcProjCollision(const sf::FloatRect &bounds);
 };
