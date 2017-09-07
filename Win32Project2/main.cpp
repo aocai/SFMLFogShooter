@@ -1,7 +1,9 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
+#include <winsock2.h>
 #include <vector>
 #include <stack>
+#include <queue>
 #include "main.h"
 
 using namespace sf;
@@ -792,32 +794,53 @@ std::vector<ConvexShape> checkShadow(std::vector<RectangleShape> walls, Vector2f
 
 const unsigned short PORT = 5000;
 const std::string ipAddress = "174.6.144.24";
-sf::TcpSocket socket;
+sf::TcpSocket tcpsocket;
+bool connected = false;
 
+class ReuseableListener : public sf::TcpListener
+{
+public:
+	ReuseableListener()
+	{
+		create();
+		reuse();
+	}
+	void reuse()
+	{
+		char reuse = 1;
+		setsockopt(getHandle(), SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+	}
+};
 
 void server()
 {
-	std::cout << "server running..." << std::endl;
-	sf::TcpListener listener;
+	auto ip = sf::IpAddress::getLocalAddress();
+	std::cout << "server running... IP is " << ip.toString() << std::endl;
+	//sf::TcpListener listener;
+	static ReuseableListener listener;
 	std::cout << "accepting socket on port " << PORT << std::endl;
+	listener.close();
 	listener.listen(PORT);
-	listener.accept(socket);
-	std::cout << "socket accepted on ip " << socket.getRemoteAddress().toString() << std::endl;
+	if (listener.accept(tcpsocket) == sf::Socket::Done)
+	{
+		std::cout << "socket accepted on ip " << tcpsocket.getRemoteAddress().toString() << std::endl;
+		connected = true;
+	}
+	//while (listener.accept(socket) != sf::Socket::Done)
+	//{
+	//	std::cout << "Socket not connecting. Trying again..." << std::endl;
+	//}
 }
 
-bool client()
+void client()
 {
 	auto ip = sf::IpAddress::getLocalAddress();
 	std::cout << ip.toString() << std::endl;
-	auto result = socket.connect(ip, PORT);
-	std::cout << result << std::endl;
-	if (result == sf::Socket::Done)
+	while (tcpsocket.connect(ip, PORT) != sf::Socket::Done)
 	{
-		std::cout << "ran" << std::endl;
-		return true;
+		std::cout << "Could not connect. Trying again..." << std::endl;
 	}
-	std::cout << "did not run" << std::endl;
-	return false;
+	connected = true;
 }
 
 struct myPacket
@@ -825,40 +848,128 @@ struct myPacket
 	Vector2f movement;
 };
 
+bool oldMovement = true;
+Vector2f p2Movement{ 0,0 };
 
-Vector2f p2Movement{ 0, 0 };
+int counter = 0;
+int counter2 = 0;
+
+std::queue<std::string> packetQueue;
 
 void receivemsg()
 {
-	while (true)
+	while (connected)
 	{
 		sf::Packet packet;
-		std::cout << "receiving packet" << std::endl;
-		socket.receive(packet);
+		//std::cout << "receiving packet" << std::endl;
+		tcpsocket.receive(packet);
 		if (packet.endOfPacket())
 		{
-			std::cout << "empty packet!" << std::endl;
+			//std::cout << "empty packet!" << std::endl;
 		}
 		else
 		{
-			const myPacket *p = static_cast<const myPacket*>(packet.getData());
-			p2Movement = p->movement;
+			string s;
+			packet >> s;
+			packetQueue.push(s);
 		}
 	}
 }
 
 
-void sendSocketMessage(Vector2f message)
+void sendSocketMessage(std::string message)
 {
 	sf::Packet packet;
-	myPacket p{ message };
-	packet.append(&p, sizeof(myPacket));
+	packet << message;
 	
-	while (socket.send(packet) == sf::Socket::Partial);
+	while (tcpsocket.send(packet) == sf::Socket::Partial);
+	++counter2;
+	cout << "sent " << counter2 << " packets" << endl;
+}
+
+void processPacketQueue(Player &p)
+{
+	while (!packetQueue.empty())
+	{
+		string s = packetQueue.front();
+		packetQueue.pop();
+		string code = "";
+		auto i = s.begin();
+		for (; i != s.end() && *i != ';'; ++i)
+		{
+			code += *i;
+		}
+		if (code == "PLAYER_MOVE")
+		{
+			i++;
+			string x = "";
+			string y = "";
+			for (; i != s.end() && *i != ','; ++i)
+			{
+				x += *i;
+			}
+			i++;
+			for (; i != s.end(); ++i)
+			{
+				y += *i;
+			}
+			Vector2f newMovement{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) };
+			if (!oldMovement)
+			{
+				p2Movement += newMovement;
+			}
+			else
+			{
+				p2Movement = newMovement;
+				oldMovement = false;
+			}
+			++counter;
+			cout << "received " << counter << " packets" << endl;
+		}
+		else if (code == "PROJECTILE_NORMAL")
+		{
+			i++;
+			string x = "";
+			string y = "";
+			for (; i != s.end() && *i != ','; ++i)
+			{
+				x += *i;
+			}
+			i++;
+			for (; i != s.end(); ++i)
+			{
+				y += *i;
+			}
+			p.rangeAttack(Vector2f{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) });
+		}
+		else if (code == "PROJECTILE_SPIRAL")
+		{
+			p.shootSpiral();
+		}
+		else if (code == "PROJECTILE_EXPAND")
+		{
+			i++;
+			string x = "";
+			string y = "";
+			for (; i != s.end() && *i != ','; ++i)
+			{
+				x += *i;
+			}
+			i++;
+			for (; i != s.end(); ++i)
+			{
+				y += *i;
+			}
+			p.shootExpand(Vector2f{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) });
+		}
+	}
 }
 
 void PlayerGameplay(RenderWindow &window)
 {
+	auto receiveThread = std::make_unique<sf::Thread>(&receivemsg);
+	receiveThread->launch();
+
 	Texture ayaTexture;
 	Texture cirnoTexture;
 	Texture flandreTexture;
@@ -889,67 +1000,230 @@ void PlayerGameplay(RenderWindow &window)
 	
 	std::vector<RectangleShape> walls;
 
+	bool pause = false;
+
 	while (window.isOpen())
 	{
-		Vector2f playerVelocity(0, 0);
-		//Player Movement
-		if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
-			playerVelocity.x -= 3.f;
-		if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
-			playerVelocity.x += 3.f;
-		if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
-			playerVelocity.y -= 3.f;
-		if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
-			playerVelocity.y += 3.f;
-		if (magnitude(playerVelocity) > 0)
+		Event event;
+		while (window.pollEvent(event))
 		{
-			player.move(playerVelocity, walls);
-			sendSocketMessage(playerVelocity);
+			if (event.type == Event::Closed)
+				window.close();
+			if (event.type == Event::LostFocus)
+				pause = true;
+			if (event.type == Event::GainedFocus)
+				pause = false;
 		}
 
-		player2.move(p2Movement, walls);
+		if (!pause)
+		{
+			Vector2f playerVelocity(0, 0);
+			//Player Movement
+			if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
+				playerVelocity.x -= 3.f;
+			if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
+				playerVelocity.x += 3.f;
+			if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
+				playerVelocity.y -= 3.f;
+			if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
+				playerVelocity.y += 3.f;
+			if (magnitude(playerVelocity) > 0)
+			{
+				player.move(playerVelocity, walls);
+				std::string s{ "PLAYER_MOVE" };
+				s += ";" + to_string(playerVelocity.x) + "," + to_string(playerVelocity.y);
+				sendSocketMessage(s);
+			}
 
+			//check for attack input
+			if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Numpad0))
+			{
+				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
+				player.rangeAttack(mouseV);
+				std::string s{ "PROJECTILE_NORMAL" };
+				s += ";" + to_string(mouseV.x) + "," + to_string(mouseV.y);
+				sendSocketMessage(s);
+			}
+			if (Keyboard::isKeyPressed(Keyboard::Z))
+			{
+				player.shootSpiral();
+				std::string s{ "PROJECTILE_SPIRAL" };
+				sendSocketMessage(s);
+			}
+			if (Keyboard::isKeyPressed(Keyboard::X))
+			{
+				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
+				player.shootExpand(mouseV);
+				std::string s{ "PROJECTILE_EXPAND" };
+				s += ";" + to_string(mouseV.x) + "," + to_string(mouseV.y);
+				sendSocketMessage(s);
+			}
+		}
 		player.updateAnimation();
 		player.updatePosition();
 
+		processPacketQueue(player2);
 		player2.updateAnimation();
+		if (!oldMovement)
+		{
+			player2.move(p2Movement, walls);
+			oldMovement = true;
+		}
 		player2.updatePosition();
 
 		window.clear(Color::White);
 
+		player.updateProjectile();
+		player2.updateProjectile();
+
 		player.draw(window);
+		player.drawProjectile(window);
 		player2.draw(window);
+		player2.drawProjectile(window);
 		window.display();
 	}
 }
 
-
-void ConnectionWaiting(RenderWindow &window)
+void CreateRoom(RenderWindow &window)
 {
-	auto serverThread = new sf::Thread(&server);
+	auto serverThread = std::make_unique<sf::Thread>(&server);
 	serverThread->launch();
-
-	auto receiveThread = new sf::Thread(&receivemsg);
-	receiveThread->launch();
 
 	sf::Font font;
 	font.loadFromFile("LLPIXEL3.ttf");
+
+	sf::Text IPHolder;
+	IPHolder.setString("Your IP Address is IPAddress");
+	IPHolder.setColor(Color::Black);
+	IPHolder.setFont(font);
+	IPHolder.setOrigin(Vector2f(IPHolder.getGlobalBounds().width / 2.f, IPHolder.getGlobalBounds().height / 2.f));
+	IPHolder.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
 
 	sf::Text connectingText;
 	connectingText.setString("Waiting for connection...");
 	connectingText.setColor(Color::Black);
 	connectingText.setFont(font);
 	connectingText.setOrigin(Vector2f(connectingText.getGlobalBounds().width / 2.f, connectingText.getGlobalBounds().height / 2.f));
-	connectingText.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+	connectingText.setPosition(IPHolder.getPosition() + Vector2f(0, 50));
 
+	sf::Text backText;
+	backText.setString("Back");
+	backText.setColor(Color::Black);
+	backText.setFont(font);
+	backText.setOrigin(Vector2f(backText.getGlobalBounds().width / 2.f, backText.getGlobalBounds().height / 2.f));
+	backText.setPosition(connectingText.getPosition() + Vector2f(0, 50));
 
-	window.clear(Color::White);
-	window.draw(connectingText);
-	window.display();
-	serverThread->wait();
+	while (!connected)
+	{
+		Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == Event::Closed)
+				window.close();
+			if (event.type == sf::Event::MouseButtonReleased)
+			{
+				if (event.mouseButton.button == sf::Mouse::Left)
+				{
+					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+					if (backText.getGlobalBounds().contains(mousePos))
+					{
+						serverThread->terminate();
+						return;
+					}
+				}
+			}
+		}
+
+		if (connectingText.getString() == "Waiting for connection...")
+		{
+			connectingText.setString("Waiting for connection");
+		}
+		else
+		{
+			connectingText.setString(connectingText.getString() + ".");
+		}
+
+		window.clear(Color::White);
+		window.draw(IPHolder);
+		window.draw(connectingText);
+		window.draw(backText);
+		window.display();
+	}
+	//serverThread->wait();
+	window.setActive(false);
 	PlayerGameplay(std::ref(window));
 }
 
+void JoinRoom(RenderWindow &window)
+{
+	auto clientThread = std::make_unique<sf::Thread>(&client);
+	clientThread->launch();
+
+	sf::Font font;
+	font.loadFromFile("LLPIXEL3.ttf");
+
+	sf::Text IPHolder;
+	IPHolder.setString("Connecting to IPAddress");
+	IPHolder.setColor(Color::Black);
+	IPHolder.setFont(font);
+	IPHolder.setOrigin(Vector2f(IPHolder.getGlobalBounds().width / 2.f, IPHolder.getGlobalBounds().height / 2.f));
+	IPHolder.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+
+	sf::Text connectingText;
+	connectingText.setString("Waiting for connection...");
+	connectingText.setColor(Color::Black);
+	connectingText.setFont(font);
+	connectingText.setOrigin(Vector2f(connectingText.getGlobalBounds().width / 2.f, connectingText.getGlobalBounds().height / 2.f));
+	connectingText.setPosition(IPHolder.getPosition() + Vector2f(0, 50));
+
+	sf::Text backText;
+	backText.setString("Back");
+	backText.setColor(Color::Black);
+	backText.setFont(font);
+	backText.setOrigin(Vector2f(backText.getGlobalBounds().width / 2.f, backText.getGlobalBounds().height / 2.f));
+	backText.setPosition(connectingText.getPosition() + Vector2f(0, 50));
+
+	while (!connected)
+	{
+		Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == Event::Closed)
+				window.close();
+			if (event.type == sf::Event::MouseButtonReleased)
+			{
+				if (event.mouseButton.button == sf::Mouse::Left)
+				{
+					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+					if (backText.getGlobalBounds().contains(mousePos))
+					{
+						clientThread->terminate();
+						return;
+					}
+				}
+			}
+		}
+
+		if (connectingText.getString() == "Joining Room...")
+		{
+			connectingText.setString("Joining Room");
+		}
+		else
+		{
+			connectingText.setString(connectingText.getString() + ".");
+		}
+
+		window.clear(Color::White);
+		window.draw(IPHolder);
+		window.draw(connectingText);
+		window.draw(backText);
+		window.display();
+	}
+	//serverThread->wait();
+
+	window.setActive(false);
+	PlayerGameplay(std::ref(window));
+}
 
 void AIGameplay(RenderWindow &window)
 {
@@ -1265,6 +1539,71 @@ void AIGameplay(RenderWindow &window)
 	}
 }
 
+void startScreen(RenderWindow &window)
+{
+	sf::Font font;
+	font.loadFromFile("LLPIXEL3.ttf");
+
+	sf::Text menu1Text;
+	menu1Text.setString("VS AI");
+	menu1Text.setColor(Color::Black);
+	menu1Text.setFont(font);
+	menu1Text.setOrigin(Vector2f(menu1Text.getGlobalBounds().width / 2.f, menu1Text.getGlobalBounds().height / 2.f));
+	menu1Text.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+
+	sf::Text menu2Text;
+	menu2Text.setString("VS Player - Create Room");
+	menu2Text.setColor(Color::Black);
+	menu2Text.setFont(font);
+	menu2Text.setOrigin(Vector2f(menu2Text.getGlobalBounds().width / 2.f, menu2Text.getGlobalBounds().height / 2.f));
+	menu2Text.setPosition(menu1Text.getPosition() + Vector2f(0,50));
+
+	sf::Text menu3Text;
+	menu3Text.setString("VS Player - Join Room");
+	menu3Text.setColor(Color::Black);
+	menu3Text.setFont(font);
+	menu3Text.setOrigin(Vector2f(menu3Text.getGlobalBounds().width / 2.f, menu3Text.getGlobalBounds().height / 2.f));
+	menu3Text.setPosition(menu2Text.getPosition() + Vector2f(0, 50));
+
+	while (window.isOpen())
+	{
+		sf::Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == sf::Event::Closed)
+				window.close();
+			if (event.type == sf::Event::MouseButtonReleased)
+			{
+				if (event.mouseButton.button == sf::Mouse::Left)
+				{
+					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+					if (menu1Text.getGlobalBounds().contains(mousePos))
+					{
+						window.setActive(false);
+						AIGameplay(std::ref(window));
+					}
+					else if (menu2Text.getGlobalBounds().contains(mousePos))
+					{
+						window.setActive(false);
+						CreateRoom(std::ref(window));
+					}
+					else if (menu3Text.getGlobalBounds().contains(mousePos))
+					{
+						window.setActive(false);
+						JoinRoom(std::ref(window));
+					}
+				}
+			}
+		}
+
+		window.clear(Color::White);
+		window.draw(menu1Text);
+		window.draw(menu2Text);
+		window.draw(menu3Text);
+		window.display();
+	}
+}
+
 
 int main()
 {
@@ -1276,59 +1615,8 @@ int main()
 	RenderWindow window(VideoMode(windowWidth, windowHeight), "FogShooter", Style::Default, settings);
 	window.setFramerateLimit(60);
 
-	RectangleShape menu1;
-	menu1.setSize(Vector2f(200, 50));
-	menu1.setOrigin(menu1.getSize() / 2.f);
-	menu1.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
-	menu1.setFillColor(Color::White);
-
-	sf::Font font;
-	font.loadFromFile("LLPIXEL3.ttf");
-
-	sf::Text menu1Text;
-	menu1Text.setString("VS AI");
-	menu1Text.setColor(Color::Black);
-	menu1Text.setFont(font);
-	menu1Text.setOrigin(Vector2f(menu1Text.getGlobalBounds().width / 2.f, menu1Text.getGlobalBounds().height / 2.f));
-	menu1Text.setPosition(menu1.getPosition());
-
-	RectangleShape menu2;
-	menu2.setSize(Vector2f(200, 50));
-	menu2.setOrigin(menu2.getSize() / 2.f);
-	menu2.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f) + 2.f * Vector2f(0, menu1.getSize().y));
-	menu2.setFillColor(Color::White);
-
-	sf::Text menu2Text;
-	menu2Text.setString("VS Player");
-	menu2Text.setColor(Color::Black);
-	menu2Text.setFont(font);
-	menu2Text.setOrigin(Vector2f(menu2Text.getGlobalBounds().width / 2.f, menu2Text.getGlobalBounds().height / 2.f));
-	menu2Text.setPosition(menu2.getPosition());
-
-	while (window.isOpen())
-	{
-		if (Mouse::isButtonPressed(Mouse::Left))
-		{
-			auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
-			if (menu1.getGlobalBounds().contains(mousePos))
-			{
-				window.setActive(false);
-				AIGameplay(std::ref(window));
-				break;
-			}
-			else if (menu2.getGlobalBounds().contains(mousePos))
-			{
-				window.setActive(false);
-				ConnectionWaiting(std::ref(window));
-				break;
-			}
-		}
-		window.draw(menu1);
-		window.draw(menu1Text);
-		window.draw(menu2);
-		window.draw(menu2Text);
-		window.display();
-	}
+	window.setActive(false);
+	startScreen(std::ref(window));
 
 	return 0;
 }

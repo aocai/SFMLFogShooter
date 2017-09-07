@@ -10,3 +10,5 @@
 
 float windowWidth;
 float windowHeight;
+
+void startScreen(RenderWindow&);
