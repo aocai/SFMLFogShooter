@@ -7,6 +7,7 @@ class SpiralProjectile
 {
 private:
 	std::vector<CircleShape> hitboxes;
+	static const float cooldown;
 public:
 	SpiralProjectile(Vector2f, float);
 	float projDamageCalc(const FloatRect&) override;
@@ -14,4 +15,5 @@ public:
 	void setAnimation(const Animation&, float) override;
 	bool updateProjectile() override;
 	void draw(RenderWindow &window) override;
+	static const float getCooldownTime();
 };

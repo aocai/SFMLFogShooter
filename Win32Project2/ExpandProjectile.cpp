@@ -1,6 +1,8 @@
 #include "ExpandProjectile.h"
 #include "utilities.h"
 
+const float ExpandProjectile::cooldown = 5.f;
+
 ExpandProjectile::ExpandProjectile(Vector2f p, Vector2f p2, float initialSize, float expandSize) : initialPosition(p), finalSize(expandSize)
 {
 	hitbox = CircleShape(initialSize);
@@ -78,4 +80,9 @@ void ExpandProjectile::draw(RenderWindow &window)
 {
 	window.draw(*animation.getSprite());
 	//window.draw(hitbox);
+}
+
+const float ExpandProjectile::getCooldownTime()
+{
+	return cooldown;
 }

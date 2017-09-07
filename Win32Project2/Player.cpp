@@ -123,26 +123,67 @@ Sprite* Player::getSprite()
 
 void Player::shootStraight(Vector2f p)
 {
-	std::unique_ptr<Projectile> cproj = std::make_unique<StraightProjectile>(getPosition() + Vector2f(16, 20), p, Vector2f(14,40));
-	Vector2f v = p - (getPosition() + Vector2f(16, 20));
-	Vector2f w(0, -1);
-	float angle = atan2(determinant(v, w), dotProduct(v, w)) * 180.0 / 3.14159265;
-	cproj->setAnimation(rangeAnimation, -angle);
-	playerProjectiles.emplace_back(std::move(cproj));
+	if (clock.getElapsedTime().asSeconds() - cooldownCounters[0] > StraightProjectile::getCooldownTime())
+	{
+		std::unique_ptr<Projectile> cproj = std::make_unique<StraightProjectile>(getPosition() + Vector2f(16, 20), p, Vector2f(14, 40));
+		Vector2f v = p - (getPosition() + Vector2f(16, 20));
+		Vector2f w(0, -1);
+		float angle = atan2(determinant(v, w), dotProduct(v, w)) * 180.0 / 3.14159265;
+		cproj->setAnimation(rangeAnimation, -angle);
+		playerProjectiles.emplace_back(std::move(cproj));
+		cooldownCounters[0] = clock.getElapsedTime().asSeconds();
+	}
 }
 
-void Player::shootSpiral()
+bool Player::rangeAttack(Vector2f v)
 {
-	std::unique_ptr<Projectile> cproj = std::make_unique<SpiralProjectile>(getPosition() + Vector2f(16, 20), 8.f);
-	cproj->setAnimation(rangeAnimation2, 0);
-	playerProjectiles.emplace_back(std::move(cproj));
+	if (clock.getElapsedTime().asSeconds() - cooldownCounters[0] > StraightProjectile::getCooldownTime())
+	{
+		target = v;
+		v = v - (getPosition() + Vector2f(16, 20));
+		if (abs(v.y) > abs(v.x))
+		{
+			if (v.y < 0)
+				setCurrentAnimation(6);
+			else
+				setCurrentAnimation(7);
+		}
+		else
+		{
+			if (v.x < 0)
+				setCurrentAnimation(4);
+			else
+				setCurrentAnimation(5);
+		}
+		return true;
+	}
+	return false;
 }
 
-void Player::shootExpand(Vector2f p)
+bool Player::shootSpiral()
 {
-	std::unique_ptr<Projectile> cproj = std::make_unique<ExpandProjectile>(getPosition() + Vector2f(16, 20), p, 5.f, 30.f);
-	cproj->setAnimation(rangeAnimation2, 0);
-	playerProjectiles.emplace_back(std::move(cproj));
+	if (clock.getElapsedTime().asSeconds() - cooldownCounters[1] > SpiralProjectile::getCooldownTime())
+	{
+		std::unique_ptr<Projectile> cproj = std::make_unique<SpiralProjectile>(getPosition() + Vector2f(16, 20), 8.f);
+		cproj->setAnimation(rangeAnimation2, 0);
+		playerProjectiles.emplace_back(std::move(cproj));
+		cooldownCounters[1] = clock.getElapsedTime().asSeconds();
+		return true;
+	}
+	return false;
+}
+
+bool Player::shootExpand(Vector2f p)
+{
+	if (clock.getElapsedTime().asSeconds() - cooldownCounters[2] > ExpandProjectile::getCooldownTime())
+	{
+		std::unique_ptr<Projectile> cproj = std::make_unique<ExpandProjectile>(getPosition() + Vector2f(16, 20), p, 5.f, 30.f);
+		cproj->setAnimation(rangeAnimation2, 0);
+		playerProjectiles.emplace_back(std::move(cproj));
+		cooldownCounters[2] = clock.getElapsedTime().asSeconds();
+		return true;
+	}
+	return false;
 }
 
 FloatRect Player::getBounds() const
@@ -178,26 +219,6 @@ void Player::drawProjectile(RenderWindow &window) const
 	for (const auto &p : playerProjectiles)
 	{
 		p->draw(window);
-	}
-}
-
-void Player::rangeAttack(Vector2f v)
-{
-	target = v;
-	v = v - (getPosition() + Vector2f(16, 20));
-	if (abs(v.y) > abs(v.x))
-	{
-		if (v.y < 0)
-			setCurrentAnimation(6);
-		else
-			setCurrentAnimation(7);
-	}
-	else
-	{
-		if (v.x < 0)
-			setCurrentAnimation(4);
-		else
-			setCurrentAnimation(5);
 	}
 }
 

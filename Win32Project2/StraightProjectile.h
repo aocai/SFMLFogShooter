@@ -7,6 +7,7 @@ class StraightProjectile
 {
 private:
 	RectangleShape hitbox;
+	static const float cooldown;
 public:
 	StraightProjectile(Vector2f, Vector2f, Vector2f);
 	float projDamageCalc(const FloatRect&) override;
@@ -14,4 +15,5 @@ public:
 	void setAnimation(const Animation&, float) override;
 	bool updateProjectile() override;
 	void draw(RenderWindow &window) override;
+	static const float getCooldownTime();
 };

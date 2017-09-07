@@ -1,5 +1,7 @@
 #include "SpiralProjectile.h"
 
+const float SpiralProjectile::cooldown = 10.f;
+
 SpiralProjectile::SpiralProjectile(Vector2f p, float size) : hitboxes(18)
 {
 	position = p;
@@ -76,4 +78,9 @@ void SpiralProjectile::draw(RenderWindow &window)
 		window.draw(i); //test
 		window.draw(*animation.getSprite());
 	}
+}
+
+const float SpiralProjectile::getCooldownTime()
+{
+	return cooldown;
 }

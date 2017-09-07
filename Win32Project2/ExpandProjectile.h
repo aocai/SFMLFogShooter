@@ -11,6 +11,7 @@ private:
 	float finalSize;
 	float totalDistance;
 	Vector2f scaling;
+	static const float cooldown;
 public:
 	ExpandProjectile(Vector2f, Vector2f, float, float);
 	float projDamageCalc(const FloatRect&) override;
@@ -18,4 +19,5 @@ public:
 	void setAnimation(const Animation&, float) override;
 	bool updateProjectile() override;
 	void draw(RenderWindow &window) override;
+	static const float getCooldownTime();
 };

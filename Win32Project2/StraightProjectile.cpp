@@ -1,5 +1,7 @@
 #include "StraightProjectile.h"
 
+const float StraightProjectile::cooldown = 2.f;
+
 StraightProjectile::StraightProjectile(Vector2f p, Vector2f p2, Vector2f hitSize)
 {
 	hitbox = RectangleShape(hitSize);
@@ -54,4 +56,9 @@ void StraightProjectile::draw(RenderWindow &window)
 {
 	window.draw(hitbox);
 	window.draw(*animation.getSprite());
+}
+
+const float StraightProjectile::getCooldownTime()
+{
+	return cooldown;
 }

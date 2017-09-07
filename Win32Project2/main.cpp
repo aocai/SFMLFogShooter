@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
+#include <SFML/Audio.hpp>
 #include <winsock2.h>
 #include <vector>
 #include <stack>
@@ -801,6 +802,7 @@ int counter = 0;
 int counter2 = 0;
 std::queue<std::string> packetQueue;
 sf::Font font;
+sf::Music BGM;
 
 class ReuseableListener : public sf::TcpListener
 {
@@ -833,11 +835,17 @@ void server()
 
 void client(std::string ipAddr)
 {
-	auto ip = sf::IpAddress(ipAddr);
+	sf::IpAddress ip;
+	if (ipAddr.empty())
+		ip = sf::IpAddress();
+	else
+		ip = sf::IpAddress(ipAddr);
+	std::cout << "attemping conenction on ip " << ip.toString() << std::endl;
 	while (tcpsocket.connect(ip, PORT) != sf::Socket::Done)
 	{
 		std::cout << "Could not connect. Trying again..." << std::endl;
 	}
+	std::cout << "connected on ip " << tcpsocket.getRemoteAddress() << std::endl;
 	connected = true;
 }
 
@@ -940,6 +948,12 @@ void processPacketQueue(Player &p)
 
 void GameOverScreen(RenderWindow &window, std::string str)
 {
+	sf::Music gameOverBgm;
+	gameOverBgm.openFromFile("Bloom_Nobly.ogg");
+	gameOverBgm.setVolume(10);
+	gameOverBgm.setLoop(true);
+	gameOverBgm.play();
+
 	sf::Text gameOverText;
 	gameOverText.setString("Game Over!");
 	gameOverText.setColor(Color::Black);
@@ -975,6 +989,7 @@ void GameOverScreen(RenderWindow &window, std::string str)
 					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 					if (returnText.getGlobalBounds().contains(mousePos))
 					{
+						gameOverBgm.stop();
 						return;
 					}
 				}
@@ -986,10 +1001,17 @@ void GameOverScreen(RenderWindow &window, std::string str)
 		window.draw(returnText);
 		window.display();
 	}
+	gameOverBgm.stop();
 }
 
 void PlayerGameplay(RenderWindow &window)
 {
+	sf::Music playerGameplayBgm;
+	playerGameplayBgm.openFromFile("Doll_Judgment.ogg");
+	playerGameplayBgm.setVolume(10);
+	playerGameplayBgm.setLoop(true);
+	playerGameplayBgm.play();
+
 	auto receiveThread = std::make_unique<sf::Thread>(&receivemsg);
 	receiveThread->launch();
 
@@ -1040,12 +1062,14 @@ void PlayerGameplay(RenderWindow &window)
 		if (player.getCurrentHP() <= 0)
 		{
 			//window.setActive(false);
+			playerGameplayBgm.stop();
 			GameOverScreen(std::ref(window), "You Lose!");
 			receiveThread->terminate();
 			return;
 		}
 		else if (player2.getCurrentHP() <= 0)
 		{
+			playerGameplayBgm.stop();
 			GameOverScreen(std::ref(window), "You Win!");
 			receiveThread->terminate();
 			return;
@@ -1075,24 +1099,33 @@ void PlayerGameplay(RenderWindow &window)
 			if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Numpad0))
 			{
 				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
-				player.rangeAttack(mouseV);
-				std::string s{ "PROJECTILE_NORMAL" };
-				s += ";" + to_string(mouseV.x) + "," + to_string(mouseV.y);
-				sendSocketMessage(s);
+				auto result = player.rangeAttack(mouseV);
+				if (result)
+				{
+					std::string s{ "PROJECTILE_NORMAL" };
+					s += ";" + to_string(mouseV.x) + "," + to_string(mouseV.y);
+					sendSocketMessage(s);
+				}
 			}
 			if (Keyboard::isKeyPressed(Keyboard::Z))
 			{
-				player.shootSpiral();
-				std::string s{ "PROJECTILE_SPIRAL" };
-				sendSocketMessage(s);
+				auto result = player.shootSpiral();
+				if (result)
+				{
+					std::string s{ "PROJECTILE_SPIRAL" };
+					sendSocketMessage(s);
+				}
 			}
 			if (Keyboard::isKeyPressed(Keyboard::X))
 			{
 				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
-				player.shootExpand(mouseV);
-				std::string s{ "PROJECTILE_EXPAND" };
-				s += ";" + to_string(mouseV.x) + "," + to_string(mouseV.y);
-				sendSocketMessage(s);
+				auto result = player.shootExpand(mouseV);
+				if (result)
+				{
+					std::string s{ "PROJECTILE_EXPAND" };
+					s += ";" + to_string(mouseV.x) + "," + to_string(mouseV.y);
+					sendSocketMessage(s);
+				}
 			}
 		}
 		player.updateAnimation();
@@ -1122,6 +1155,7 @@ void PlayerGameplay(RenderWindow &window)
 		window.display();
 	}
 	receiveThread->terminate();
+	playerGameplayBgm.stop();
 }
 
 void CreateRoom(RenderWindow &window)
@@ -1190,7 +1224,9 @@ void CreateRoom(RenderWindow &window)
 	}
 	serverThread->wait();
 	//window.setActive(false);
+	BGM.stop();
 	PlayerGameplay(std::ref(window));
+	BGM.play();
 }
 
 bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
@@ -1258,7 +1294,9 @@ bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 	//serverThread->wait();
 
 	//window.setActive(false);
+	BGM.stop();
 	PlayerGameplay(std::ref(window));
+	BGM.play();
 	return true;
 }
 
@@ -1360,6 +1398,12 @@ void JoinRoom(RenderWindow &window)
 
 void AIGameplay(RenderWindow &window)
 {
+	sf::Music AIGameplayBgm;
+	AIGameplayBgm.openFromFile("Doll_Judgment.ogg");
+	AIGameplayBgm.setVolume(10);
+	AIGameplayBgm.setLoop(true);
+	AIGameplayBgm.play();
+
 	std::vector<double> mapMatrix((windowWidth / 10) * (windowHeight / 10), 1);
 	std::vector<int> workVector((windowWidth / 10) * (windowHeight / 10), 0);
 
@@ -1455,6 +1499,8 @@ void AIGameplay(RenderWindow &window)
 	float deltaX;
 	float deltaY;
 
+	bool pause = false;
+
 	while (window.isOpen())
 	{
 		Event event;
@@ -1462,89 +1508,103 @@ void AIGameplay(RenderWindow &window)
 		{
 			if (event.type == Event::Closed)
 				window.close();
+			if (event.type == Event::LostFocus)
+				pause = true;
+			if (event.type == Event::GainedFocus)
+				pause = false;
 		}
 
-		//allow walls to be moved around by dragging with MLB
-		if (Mouse::isButtonPressed(Mouse::Left))
+		if (player.getCurrentHP() <= 0)
 		{
-			if (currentWall == walls.size())
-			{
-				for (size_t i = 0; i < walls.size(); ++i)
-				{
-					if (walls[i].getGlobalBounds().contains(window.mapPixelToCoords(Mouse::getPosition(window))))
-					{
-						//get wall thats clicked on
-						currentWall = i;
+			AIGameplayBgm.stop();
+			GameOverScreen(std::ref(window), "You Lose!");
+			return;
+		}
 
-						deltaX = window.mapPixelToCoords(Mouse::getPosition(window)).x - walls[currentWall].getPosition().x;
-						deltaY = window.mapPixelToCoords(Mouse::getPosition(window)).y - walls[currentWall].getPosition().y;
-						break;
+		if (!pause)
+		{
+			//allow walls to be moved around by dragging with MLB
+			if (Mouse::isButtonPressed(Mouse::Left))
+			{
+				if (currentWall == walls.size())
+				{
+					for (size_t i = 0; i < walls.size(); ++i)
+					{
+						if (walls[i].getGlobalBounds().contains(window.mapPixelToCoords(Mouse::getPosition(window))))
+						{
+							//get wall thats clicked on
+							currentWall = i;
+
+							deltaX = window.mapPixelToCoords(Mouse::getPosition(window)).x - walls[currentWall].getPosition().x;
+							deltaY = window.mapPixelToCoords(Mouse::getPosition(window)).y - walls[currentWall].getPosition().y;
+							break;
+						}
 					}
 				}
 			}
-		}
-		else
-		{
-			currentWall = walls.size();
-			deltaX = 0;
-			deltaY = 0;
-		}
+			else
+			{
+				currentWall = walls.size();
+				deltaX = 0;
+				deltaY = 0;
+			}
 
-		//if wall is selected by MLB
-		if (currentWall < walls.size())
-		{
-			Vector2f wallSize = walls[currentWall].getSize();
+			//if wall is selected by MLB
+			if (currentWall < walls.size())
+			{
+				Vector2f wallSize = walls[currentWall].getSize();
 
-			//free current wall in mapMatrix if not already done so
-			if (dirtyWalls[currentWall] == 0)
-				updateMapMatrix(mapMatrix, walls[currentWall].getPosition(), walls[currentWall].getPosition() + wallSize, 1);
+				//free current wall in mapMatrix if not already done so
+				if (dirtyWalls[currentWall] == 0)
+					updateMapMatrix(mapMatrix, walls[currentWall].getPosition(), walls[currentWall].getPosition() + wallSize, 1);
 
-			//move wall to new mouse position
-			float posX = window.mapPixelToCoords(Mouse::getPosition(window)).x - deltaX;
-			float posY = window.mapPixelToCoords(Mouse::getPosition(window)).y - deltaY;
+				//move wall to new mouse position
+				float posX = window.mapPixelToCoords(Mouse::getPosition(window)).x - deltaX;
+				float posY = window.mapPixelToCoords(Mouse::getPosition(window)).y - deltaY;
 
-			if (posX < 0)
-				posX = 0;
-			else if (posX + wallSize.x > windowWidth)
-				posX = windowWidth - wallSize.x;
-			if (posY < 0)
-				posY = 0;
-			else if (posY + wallSize.y > windowHeight)
-				posY = windowHeight - wallSize.y;
+				if (posX < 0)
+					posX = 0;
+				else if (posX + wallSize.x > windowWidth)
+					posX = windowWidth - wallSize.x;
+				if (posY < 0)
+					posY = 0;
+				else if (posY + wallSize.y > windowHeight)
+					posY = windowHeight - wallSize.y;
 
-			walls[currentWall].setPosition(Vector2f(posX, posY));
+				walls[currentWall].setPosition(Vector2f(posX, posY));
 
-			//set Wall to dirty and to be updated in pathfinding
-			dirtyWalls[currentWall] = 1;
-		}
+				//set Wall to dirty and to be updated in pathfinding
+				dirtyWalls[currentWall] = 1;
+			}
 
-		Vector2f playerVelocity(0, 0);
-		//Player Movement
-		if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
-			playerVelocity.x -= 3.f;
-		if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
-			playerVelocity.x += 3.f;
-		if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
-			playerVelocity.y -= 3.f;
-		if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
-			playerVelocity.y += 3.f;
-		if (magnitude(playerVelocity) > 0)
-			player.move(playerVelocity, walls);
+			Vector2f playerVelocity(0, 0);
+			//Player Movement
+			if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
+				playerVelocity.x -= 3.f;
+			if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
+				playerVelocity.x += 3.f;
+			if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
+				playerVelocity.y -= 3.f;
+			if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
+				playerVelocity.y += 3.f;
+			if (magnitude(playerVelocity) > 0)
+				player.move(playerVelocity, walls);
 
-		//check for attack input
-		if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Numpad0))
-		{
-			Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
-			player.rangeAttack(mouseV);
-		}
-		if (Keyboard::isKeyPressed(Keyboard::Z))
-		{
-			player.shootSpiral();
-		}
-		if (Keyboard::isKeyPressed(Keyboard::X))
-		{
-			Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
-			player.shootExpand(mouseV);
+			//check for attack input
+			if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Numpad0))
+			{
+				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
+				player.rangeAttack(mouseV);
+			}
+			if (Keyboard::isKeyPressed(Keyboard::Z))
+			{
+				player.shootSpiral();
+			}
+			if (Keyboard::isKeyPressed(Keyboard::X))
+			{
+				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
+				player.shootExpand(mouseV);
+			}
 		}
 
 		player.updateAnimation();
@@ -1665,15 +1725,18 @@ void AIGameplay(RenderWindow &window)
 		//draw player projectiles
 		player.drawProjectile(window);
 
-		if (player.getCurrentHP() <= 0)
-			window.close();
-
 		window.display();
 	}
+	AIGameplayBgm.stop();
 }
 
 void startScreen(RenderWindow &window)
 {
+	BGM.openFromFile("Necrofantasia.ogg");
+	BGM.setVolume(10);
+	BGM.setLoop(true);
+	BGM.play();
+
 	font.loadFromFile("LLPIXEL3.ttf");
 
 	sf::Text menu1Text;
@@ -1712,7 +1775,9 @@ void startScreen(RenderWindow &window)
 					if (menu1Text.getGlobalBounds().contains(mousePos))
 					{
 						//window.setActive(false);
+						BGM.stop();
 						AIGameplay(std::ref(window));
+						BGM.play();
 					}
 					else if (menu2Text.getGlobalBounds().contains(mousePos))
 					{

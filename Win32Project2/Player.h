@@ -35,6 +35,9 @@ private:
 
 	mutable float hp;
 	mutable RectangleShape hpBar;
+
+	sf::Clock clock = sf::Clock();
+	std::vector<float> cooldownCounters = std::vector<float>(3,-100.f);
 public:
 	Player(Vector2f size, Vector2f pos);
 	void setMoveAnimation(const Texture &t, float speed);
@@ -48,13 +51,13 @@ public:
 	Vector2f getSize() const;
 	Sprite* getSprite();
 	void shootStraight(Vector2f p);
-	void shootSpiral();
-	void shootExpand(Vector2f);
+	bool rangeAttack(Vector2f v);
+	bool shootSpiral();
+	bool shootExpand(Vector2f);
 	FloatRect getBounds() const;
 	void draw(RenderWindow &window) const;
 	void updateProjectile();
 	void drawProjectile(RenderWindow &window) const;
-	void rangeAttack(Vector2f v);
 	void move(Vector2f v, const std::vector<RectangleShape> &walls);
 	void takeDamage(float dmg) const;
 	float getCurrentHP() const;
