@@ -832,21 +832,17 @@ void server()
 	//}
 }
 
-void client()
+void client(std::string ipAddr)
 {
-	auto ip = sf::IpAddress::getLocalAddress();
-	std::cout << ip.toString() << std::endl;
+	//auto ip = sf::IpAddress::getLocalAddress();
+	//std::cout << ip.toString() << std::endl;
+	auto ip = sf::IpAddress(ipAddr);
 	while (tcpsocket.connect(ip, PORT) != sf::Socket::Done)
 	{
 		std::cout << "Could not connect. Trying again..." << std::endl;
 	}
 	connected = true;
 }
-
-struct myPacket
-{
-	Vector2f movement;
-};
 
 bool oldMovement = true;
 Vector2f p2Movement{ 0,0 };
@@ -889,6 +885,7 @@ void sendSocketMessage(std::string message)
 
 void processPacketQueue(Player &p)
 {
+	std::vector<RectangleShape> walls;
 	while (!packetQueue.empty())
 	{
 		string s = packetQueue.front();
@@ -914,6 +911,7 @@ void processPacketQueue(Player &p)
 				y += *i;
 			}
 			Vector2f newMovement{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) };
+			/*
 			if (!oldMovement)
 			{
 				p2Movement += newMovement;
@@ -923,8 +921,8 @@ void processPacketQueue(Player &p)
 				p2Movement = newMovement;
 				oldMovement = false;
 			}
-			++counter;
-			cout << "received " << counter << " packets" << endl;
+			*/
+			p.move(newMovement,walls);
 		}
 		else if (code == "PROJECTILE_NORMAL")
 		{
@@ -962,6 +960,8 @@ void processPacketQueue(Player &p)
 			}
 			p.shootExpand(Vector2f{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) });
 		}
+		++counter;
+		cout << "received " << counter << " packets" << endl;
 	}
 }
 
@@ -1064,11 +1064,13 @@ void PlayerGameplay(RenderWindow &window)
 
 		processPacketQueue(player2);
 		player2.updateAnimation();
+		/*
 		if (!oldMovement)
 		{
 			player2.move(p2Movement, walls);
 			oldMovement = true;
 		}
+		*/
 		player2.updatePosition();
 
 		window.clear(Color::White);
@@ -1092,8 +1094,10 @@ void CreateRoom(RenderWindow &window)
 	sf::Font font;
 	font.loadFromFile("LLPIXEL3.ttf");
 
+	auto ip = sf::IpAddress::getLocalAddress().toString();
+
 	sf::Text IPHolder;
-	IPHolder.setString("Your IP Address is IPAddress");
+	IPHolder.setString("Your IP Address is " + ip);
 	IPHolder.setColor(Color::Black);
 	IPHolder.setFont(font);
 	IPHolder.setOrigin(Vector2f(IPHolder.getGlobalBounds().width / 2.f, IPHolder.getGlobalBounds().height / 2.f));
@@ -1154,9 +1158,9 @@ void CreateRoom(RenderWindow &window)
 	PlayerGameplay(std::ref(window));
 }
 
-void JoinRoom(RenderWindow &window)
+void ConnectingRoom(RenderWindow &window, std::string ipAddr)
 {
-	auto clientThread = std::make_unique<sf::Thread>(&client);
+	auto clientThread = std::make_unique<sf::Thread>(&client, ipAddr);
 	clientThread->launch();
 
 	sf::Font font;
@@ -1170,7 +1174,7 @@ void JoinRoom(RenderWindow &window)
 	IPHolder.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
 
 	sf::Text connectingText;
-	connectingText.setString("Waiting for connection...");
+	connectingText.setString("Joining Room...");
 	connectingText.setColor(Color::Black);
 	connectingText.setFont(font);
 	connectingText.setOrigin(Vector2f(connectingText.getGlobalBounds().width / 2.f, connectingText.getGlobalBounds().height / 2.f));
@@ -1217,6 +1221,103 @@ void JoinRoom(RenderWindow &window)
 		window.draw(IPHolder);
 		window.draw(connectingText);
 		window.draw(backText);
+		window.display();
+	}
+	//serverThread->wait();
+
+	window.setActive(false);
+	PlayerGameplay(std::ref(window));
+}
+
+void JoinRoom(RenderWindow &window)
+{
+	sf::Font font;
+	font.loadFromFile("LLPIXEL3.ttf");
+
+	sf::Text TextPrompt;
+	TextPrompt.setString("Please enter IP to connect...");
+	TextPrompt.setColor(Color::Black);
+	TextPrompt.setFont(font);
+	TextPrompt.setOrigin(Vector2f(TextPrompt.getGlobalBounds().width / 2.f, TextPrompt.getGlobalBounds().height / 2.f));
+	TextPrompt.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+
+	sf::Text IP;
+	IP.setString("");
+	IP.setColor(Color::Black);
+	IP.setFont(font);
+	IP.setOrigin(Vector2f(IP.getGlobalBounds().width / 2.f, IP.getGlobalBounds().height / 2.f));
+	IP.setPosition(TextPrompt.getPosition() + Vector2f(0, 50));
+
+	sf::Text connectText;
+	connectText.setString("Connect!");
+	connectText.setColor(Color::Black);
+	connectText.setFont(font);
+	connectText.setOrigin(Vector2f(connectText.getGlobalBounds().width / 2.f, connectText.getGlobalBounds().height / 2.f));
+	connectText.setPosition(IP.getPosition() + Vector2f(0, 50));
+
+	sf::Text backText;
+	backText.setString("Back");
+	backText.setColor(Color::Black);
+	backText.setFont(font);
+	backText.setOrigin(Vector2f(backText.getGlobalBounds().width / 2.f, backText.getGlobalBounds().height / 2.f));
+	backText.setPosition(connectText.getPosition() + Vector2f(0, 50));
+
+	std::string ipstring;
+
+	while (!connected)
+	{
+		Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == Event::Closed)
+				window.close();
+			if (event.type == sf::Event::MouseButtonReleased)
+			{
+				if (event.mouseButton.button == sf::Mouse::Left)
+				{
+					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+					if (backText.getGlobalBounds().contains(mousePos))
+					{
+						return;
+					}
+					else if (connectText.getGlobalBounds().contains(mousePos))
+					{
+						window.setActive(false);
+						std::cout << ipstring << std::endl;
+						ConnectingRoom(std::ref(window), ipstring);
+					}
+				}
+			}
+			else if (event.type == sf::Event::TextEntered)
+			{
+				//if backspace pressed...
+				if (event.text.unicode == 8 && !ipstring.empty())
+				{
+					ipstring.pop_back();
+				}
+				//if enter pressed...
+				else if (event.text.unicode == 13)
+				{
+					window.setActive(false);
+					std::cout << ipstring << std::endl;
+					ConnectingRoom(std::ref(window), ipstring);
+				}
+				else if (event.text.unicode < 128)
+				{
+					ipstring.push_back(static_cast<char>(event.text.unicode));
+				}
+			}
+		}
+
+		IP.setString(ipstring);
+		IP.setOrigin(Vector2f(IP.getGlobalBounds().width / 2.f, IP.getGlobalBounds().height / 2.f));
+		IP.setPosition(TextPrompt.getPosition() + Vector2f(0, 50));
+
+		window.clear(Color::White);
+		window.draw(TextPrompt);
+		window.draw(IP);
+		window.draw(backText);
+		window.draw(connectText);
 		window.display();
 	}
 	//serverThread->wait();
