@@ -798,12 +798,15 @@ const std::string ipAddress = "174.6.144.24";
 sf::TcpSocket tcpsocket;
 bool connected = false;
 bool keepTrying = true;
+bool roomReady = false;
 
 int counter = 0;
 int counter2 = 0;
 std::queue<std::string> packetQueue;
+std::vector<RectangleShape> customWalls;
 sf::Font font;
 sf::Music BGM;
+sf::Texture brickTexture;
 
 class ReuseableListener : public sf::TcpListener
 {
@@ -878,12 +881,11 @@ void sendSocketMessage(std::string message)
 	
 	while (tcpsocket.send(packet) == sf::Socket::Partial);
 	++counter2;
-	cout << "sent " << counter2 << " packets" << endl;
+	std::cout << "sent " << counter2 << " packets" << std::endl;
 }
 
-void processPacketQueue(Player &p)
+void processInitPacketQueue()
 {
-	std::vector<RectangleShape> walls;
 	while (!packetQueue.empty())
 	{
 		string s = packetQueue.front();
@@ -894,6 +896,66 @@ void processPacketQueue(Player &p)
 		{
 			code += *i;
 		}
+		std::cout << code << std::endl;
+		if (code == "ROOM_READY")
+		{
+			std::cout << "received packet ROOM_READY!" << std::endl;
+			i++;
+			string posX;
+			string posY;
+			string sizeX;
+			string sizeY;
+			while (i != s.end())
+			{
+				for (; i != s.end() && *i != ','; ++i)
+				{
+					posX += *i;
+				}
+				++i;
+				for (; i != s.end() && *i != ';'; ++i)
+				{
+					posY += *i;
+				}
+				++i;
+				for (; i != s.end() && *i != ','; ++i)
+				{
+					sizeX += *i;
+				}
+				++i;
+				for (; i != s.end() && *i != ';'; ++i)
+				{
+					sizeY += *i;
+				}
+				RectangleShape r{ Vector2f{ static_cast<float>(atof(sizeX.c_str())), static_cast<float>(atof(sizeY.c_str())) } };
+				r.setPosition(Vector2f{ static_cast<float>(atof(posX.c_str())), static_cast<float>(atof(posY.c_str())) });
+				//r.setFillColor(Color::Black);
+				r.setTexture(&brickTexture);
+				r.setTextureRect({ 0,0,10 * static_cast<int>(r.getSize().x),10 * static_cast<int>(r.getSize().y) });
+				customWalls.emplace_back(r);
+				std::cout << "Rectangle at (" << r.getPosition().x << "," << r.getPosition().y << ") with size (" << r.getSize().x << "," << r.getSize().y << ")" << std::endl;
+				if (i == s.end())
+					break;
+				else 
+					i++;
+			}
+			roomReady = true;
+		}
+	}
+}
+
+void processPlayerPacketQueue(Player &p)
+{
+	while (!packetQueue.empty())
+	{
+		string s = packetQueue.front();
+		packetQueue.pop();
+		string code = "";
+		auto i = s.begin();
+		for (; i != s.end() && *i != ';'; ++i)
+		{
+			code += *i;
+		}
+		std::cout << code << std::endl;
 		if (code == "PLAYER_MOVE")
 		{
 			i++;
@@ -909,7 +971,7 @@ void processPacketQueue(Player &p)
 				y += *i;
 			}
 			Vector2f newMovement{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) };
-			p.move(newMovement,walls);
+			p.move(newMovement, customWalls);
 		}
 		else if (code == "PROJECTILE_NORMAL")
 		{
@@ -947,8 +1009,12 @@ void processPacketQueue(Player &p)
 			}
 			p.shootExpand(Vector2f{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) });
 		}
+		else if (code == "SOCKET_DISCONNECT")
+		{
+			connected = false;
+		}
 		++counter;
-		cout << "received " << counter << " packets" << endl;
+		std::cout << "received " << counter << " packets" << std::endl;
 	}
 }
 
@@ -958,7 +1024,7 @@ void GameOverScreen(RenderWindow &window, std::string str)
 	tcpsocket.disconnect();
 
 	sf::Music gameOverBgm;
-	gameOverBgm.openFromFile("Bloom_Nobly.ogg");
+	gameOverBgm.openFromFile("Resources\\Music\\Bloom_Nobly.ogg");
 	gameOverBgm.setVolume(10);
 	gameOverBgm.setLoop(true);
 	gameOverBgm.play();
@@ -998,6 +1064,7 @@ void GameOverScreen(RenderWindow &window, std::string str)
 					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 					if (returnText.getGlobalBounds().contains(mousePos))
 					{
+						std::vector<RectangleShape>().swap(customWalls);
 						gameOverBgm.stop();
 						return;
 					}
@@ -1010,13 +1077,126 @@ void GameOverScreen(RenderWindow &window, std::string str)
 		window.draw(returnText);
 		window.display();
 	}
+	std::vector<RectangleShape>().swap(customWalls);
 	gameOverBgm.stop();
 }
 
-void PlayerGameplay(RenderWindow &window)
+void createPlayArea(RenderWindow &window)
+{
+	bool pause = false;
+	Vector2f upperLeft;
+	Vector2f bottomRight;
+	
+	while (window.isOpen())
+	{
+		Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == Event::Closed)
+				window.close();
+			if (event.type == Event::LostFocus)
+				pause = true;
+			if (event.type == Event::GainedFocus)
+				pause = false;
+			if (!pause && event.type == sf::Event::MouseButtonPressed)
+			{
+				if (event.mouseButton.button == sf::Mouse::Left)
+				{
+					upperLeft.x = event.mouseButton.x; 
+					upperLeft.y = event.mouseButton.y;
+				}
+				else if (event.mouseButton.button == sf::Mouse::Right)
+				{
+					Vector2f v = { static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y) };
+					for (int i = 0; i < customWalls.size(); ++i)
+					{
+						if (customWalls[i].getGlobalBounds().contains(v))
+						{
+							customWalls.erase(customWalls.begin() + i);
+							break;
+						}
+					}
+				}
+			}
+			if (!pause && event.type == sf::Event::MouseButtonReleased)
+			{
+				if (event.mouseButton.button == sf::Mouse::Left)
+				{
+					bottomRight.x = event.mouseButton.x;
+					bottomRight.y = event.mouseButton.y;
+					RectangleShape s{ bottomRight - upperLeft };
+					s.setPosition(upperLeft);
+					//s.setFillColor(Color::Black);
+					s.setTexture(&brickTexture);
+					s.setTextureRect({ 0,0,10 * static_cast<int>(s.getSize().x),10 * static_cast<int>(s.getSize().y) });
+					customWalls.emplace_back(s);
+				}
+			}
+			if (!pause && event.type == sf::Event::KeyPressed)
+			{
+				if (event.key.code == sf::Keyboard::Escape)
+				{
+					std::string s{"ROOM_READY"};
+					for (const auto &i : customWalls)
+					{
+						s += ";" + to_string(i.getPosition().x) + "," + to_string(i.getPosition().y);
+						s += ";" + to_string(i.getSize().x) + "," + to_string(i.getSize().y);
+						std::cout << "Rectangle at (" << i.getPosition().x << "," << i.getPosition().y << ") with size (" << i.getSize().x << "," << i.getSize().y << ")" << std::endl;
+					}
+					sendSocketMessage(s);
+					return;
+				}
+			}
+		}
+
+		window.clear(Color::White);
+
+		for (const auto &w : customWalls)
+			window.draw(w);
+
+		window.display();
+	}
+}
+
+void waitRoom(RenderWindow &window)
+{
+	sf::Text waitText;
+	waitText.setString("Waiting for map creation by host...");
+	waitText.setColor(Color::Black);
+	waitText.setFont(font);
+	waitText.setOrigin(Vector2f(waitText.getGlobalBounds().width / 2.f, waitText.getGlobalBounds().height / 2.f));
+	waitText.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+
+	while (!roomReady && window.isOpen())
+	{
+		Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == Event::Closed)
+				window.close();
+		}
+
+		if (waitText.getString() == "Waiting for map creation by host...")
+		{
+			waitText.setString("Waiting for map creation by host");
+		}
+		else
+		{
+			waitText.setString(waitText.getString() + ".");
+		}
+
+		processInitPacketQueue();
+
+		window.clear(Color::White);
+		window.draw(waitText);
+		window.display();
+	}
+}
+
+void PlayerGameplay(RenderWindow &window, int playerNumber)
 {
 	sf::Music playerGameplayBgm;
-	playerGameplayBgm.openFromFile("Doll_Judgment.ogg");
+	playerGameplayBgm.openFromFile("Resources\\Music\\Doll_Judgment.ogg");
 	playerGameplayBgm.setVolume(10);
 	playerGameplayBgm.setLoop(true);
 	playerGameplayBgm.play();
@@ -1024,34 +1204,42 @@ void PlayerGameplay(RenderWindow &window)
 	auto receiveThread = std::make_unique<sf::Thread>(&receivemsg);
 	receiveThread->launch();
 
+	if (playerNumber == 0)
+	{
+		createPlayArea(std::ref(window));
+	}
+	else
+	{
+		waitRoom(std::ref(window));
+	}
+
 	Texture ayaTexture;
 	Texture cirnoTexture;
 	Texture flandreTexture;
 	Texture sakuyaTexture;
 	Texture suikaTexture;
 	Texture daiyouseiTexture;
-	ayaTexture.loadFromFile("sprites\\Aya Shameimaru.png");
-	cirnoTexture.loadFromFile("sprites\\Cirno.png");
-	flandreTexture.loadFromFile("sprites\\Flandre Scarlet.png");
-	sakuyaTexture.loadFromFile("sprites\\Sakuya Izayoi.png");
-	suikaTexture.loadFromFile("sprites\\Suika Ibuki.png");
-	daiyouseiTexture.loadFromFile("sprites\\Daiyousei.png");
+	ayaTexture.loadFromFile("Resources\\Sprites\\Aya Shameimaru.png");
+	cirnoTexture.loadFromFile("Resources\\Sprites\\Cirno.png");
+	flandreTexture.loadFromFile("Resources\\Sprites\\Flandre Scarlet.png");
+	sakuyaTexture.loadFromFile("Resources\\Sprites\\Sakuya Izayoi.png");
+	suikaTexture.loadFromFile("Resources\\Sprites\\Suika Ibuki.png");
+	daiyouseiTexture.loadFromFile("Resources\\Sprites\\Daiyousei.png");
 
-	Player player(Vector2f(32, 40), Vector2f(200, windowHeight / 2.f));
+	Player player(Vector2f(32, 40), Vector2f((playerNumber == 0) ? 200 : 1000, windowHeight / 2.f));
 	player.setMoveAnimation(flandreTexture, 0.1f);
 	player.setAttackAnimation(flandreTexture, 0.15f);
 	player.setRangeAnimation(flandreTexture, 0.1f);
 	player.setRangeAnimation2(daiyouseiTexture, 0.1f);
 	player.getSprite()->setPosition(player.getPosition());
 
-	Player player2(Vector2f(32, 40), Vector2f(1000, windowHeight / 2.f));
+	Player player2(Vector2f(32, 40), Vector2f((playerNumber != 0) ? 200 : 1000, windowHeight / 2.f));
 	player2.setMoveAnimation(flandreTexture, 0.1f);
 	player2.setAttackAnimation(flandreTexture, 0.15f);
 	player2.setRangeAnimation(flandreTexture, 0.1f);
 	player2.setRangeAnimation2(daiyouseiTexture, 0.1f);
 	player2.getSprite()->setPosition(player2.getPosition());
 	
-	std::vector<RectangleShape> walls;
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
 	bool pause = false;
@@ -1062,7 +1250,12 @@ void PlayerGameplay(RenderWindow &window)
 		while (window.pollEvent(event))
 		{
 			if (event.type == Event::Closed)
+			{
+				connected = false;
+				tcpsocket.disconnect();
+				sendSocketMessage("SOCKET_DISCONNECT");
 				window.close();
+			}
 			if (event.type == Event::LostFocus)
 				pause = true;
 			if (event.type == Event::GainedFocus)
@@ -1099,7 +1292,7 @@ void PlayerGameplay(RenderWindow &window)
 				playerVelocity.y += 3.f;
 			if (magnitude(playerVelocity) > 0)
 			{
-				player.move(playerVelocity, walls);
+				player.move(playerVelocity, customWalls);
 				std::string s{ "PLAYER_MOVE" };
 				s += ";" + to_string(playerVelocity.x) + "," + to_string(playerVelocity.y);
 				sendSocketMessage(s);
@@ -1141,7 +1334,7 @@ void PlayerGameplay(RenderWindow &window)
 		player.updateAnimation();
 		player.updatePosition();
 
-		processPacketQueue(player2);
+		processPlayerPacketQueue(player2);
 
 		player2.updateAnimation();
 		player2.updatePosition();
@@ -1179,19 +1372,29 @@ void PlayerGameplay(RenderWindow &window)
 		std::vector<ConvexShape> los = clipLOS(playerPosition, lastMousePosition, leftArm, rightArm);
 
 		//check shadow ConvexShapes
-		std::vector<ConvexShape> shadow = checkShadow(walls, playerPosition);
+		std::vector<ConvexShape> shadow = checkShadow(customWalls, playerPosition);
 
 		window.clear(Color::White);
 
 		player.updateProjectile();
 		player2.updateProjectile();
 
-		for (const auto &i : los)
-			window.draw(i);
-		player.draw(window);
-		player.drawProjectile(window);
 		player2.draw(window);
 		player2.drawProjectile(window);
+
+		player.drawProjectile(window);
+
+		for (const auto &s : shadow)
+			window.draw(s);
+
+		for (const auto &i : los)
+			window.draw(i);
+
+		for (const auto &w : customWalls)
+			window.draw(w);
+
+		player.draw(window);
+
 		window.display();
 	}
 	//receiveThread->terminate();
@@ -1265,7 +1468,7 @@ void CreateRoom(RenderWindow &window)
 	serverThread->wait();
 	//window.setActive(false);
 	BGM.stop();
-	PlayerGameplay(std::ref(window));
+	PlayerGameplay(std::ref(window), 0);
 	BGM.play();
 }
 
@@ -1337,7 +1540,7 @@ bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 
 	//window.setActive(false);
 	BGM.stop();
-	PlayerGameplay(std::ref(window));
+	PlayerGameplay(std::ref(window), 1);
 	BGM.play();
 	return true;
 }
@@ -1442,7 +1645,7 @@ void JoinRoom(RenderWindow &window)
 void AIGameplay(RenderWindow &window)
 {
 	sf::Music AIGameplayBgm;
-	AIGameplayBgm.openFromFile("Doll_Judgment.ogg");
+	AIGameplayBgm.openFromFile("Resources\\Music\\Doll_Judgment.ogg");
 	AIGameplayBgm.setVolume(10);
 	AIGameplayBgm.setLoop(true);
 	AIGameplayBgm.play();
@@ -1459,35 +1662,45 @@ void AIGameplay(RenderWindow &window)
 	RectangleShape rect1;
 	rect1.setSize(Vector2f(80, 220));
 	rect1.setPosition(Vector2f(120, 110));
-	rect1.setFillColor(Color::Black);
+	//rect1.setFillColor(Color::Black);
+	rect1.setTexture(&brickTexture);
+	rect1.setTextureRect({0,0,800,2200});
 	walls.push_back(rect1);
 	updateMapMatrix(mapMatrix, rect1.getPosition(), rect1.getPosition() + rect1.getSize(), -1);
 
 	RectangleShape rect2;
 	rect2.setSize(Vector2f(80, 300));
 	rect2.setPosition(Vector2f(520, 250));
-	rect2.setFillColor(Color::Black);
+	//rect2.setFillColor(Color::Black);
+	rect2.setTexture(&brickTexture);
+	rect2.setTextureRect({ 0,0,800,3000 });
 	walls.push_back(rect2);
 	updateMapMatrix(mapMatrix, rect2.getPosition(), rect2.getPosition() + rect2.getSize(), -1);
 
 	RectangleShape rect3;
 	rect3.setSize(Vector2f(60, 160));
 	rect3.setPosition(Vector2f(300, 50));
-	rect3.setFillColor(Color::Black);
+	//rect3.setFillColor(Color::Black);
+	rect3.setTexture(&brickTexture);
+	rect3.setTextureRect({ 0,0,600,1600 });
 	walls.push_back(rect3);
 	updateMapMatrix(mapMatrix, rect3.getPosition(), rect3.getPosition() + rect3.getSize(), -1);
 
 	RectangleShape rect4;
 	rect4.setSize(Vector2f(250, 110));
 	rect4.setPosition(Vector2f(750, 600));
-	rect4.setFillColor(Color::Black);
+	//rect4.setFillColor(Color::Black);
+	rect4.setTexture(&brickTexture);
+	rect4.setTextureRect({ 0,0,2500,1100 });
 	walls.push_back(rect4);
 	updateMapMatrix(mapMatrix, rect4.getPosition(), rect4.getPosition() + rect4.getSize(), -1);
 
 	RectangleShape rect5;
 	rect5.setSize(Vector2f(220, 90));
 	rect5.setPosition(Vector2f(1000, 320));
-	rect5.setFillColor(Color::Black);
+	//rect5.setFillColor(Color::Black);
+	rect5.setTexture(&brickTexture);
+	rect5.setTextureRect({ 0,0,2200,900 });
 	walls.push_back(rect5);
 	updateMapMatrix(mapMatrix, rect5.getPosition(), rect5.getPosition() + rect5.getSize(), -1);
 
@@ -1503,12 +1716,12 @@ void AIGameplay(RenderWindow &window)
 	Texture sakuyaTexture;
 	Texture suikaTexture;
 	Texture daiyouseiTexture;
-	ayaTexture.loadFromFile("sprites\\Aya Shameimaru.png");
-	cirnoTexture.loadFromFile("sprites\\Cirno.png");
-	flandreTexture.loadFromFile("sprites\\Flandre Scarlet.png");
-	sakuyaTexture.loadFromFile("sprites\\Sakuya Izayoi.png");
-	suikaTexture.loadFromFile("sprites\\Suika Ibuki.png");
-	daiyouseiTexture.loadFromFile("sprites\\Daiyousei.png");
+	ayaTexture.loadFromFile("Resources\\Sprites\\Aya Shameimaru.png");
+	cirnoTexture.loadFromFile("Resources\\Sprites\\Cirno.png");
+	flandreTexture.loadFromFile("Resources\\Sprites\\Flandre Scarlet.png");
+	sakuyaTexture.loadFromFile("Resources\\Sprites\\Sakuya Izayoi.png");
+	suikaTexture.loadFromFile("Resources\\Sprites\\Suika Ibuki.png");
+	daiyouseiTexture.loadFromFile("Resources\\Sprites\\Daiyousei.png");
 
 	std::unique_ptr<Enemy> aya = std::make_unique<Aya>(Vector2f(1000, 20));
 	aya->setMoveAnimation(ayaTexture, 0.1f);
@@ -1775,12 +1988,14 @@ void AIGameplay(RenderWindow &window)
 
 void startScreen(RenderWindow &window)
 {
-	BGM.openFromFile("Necrofantasia.ogg");
+	BGM.openFromFile("Resources\\Music\\Necrofantasia.ogg");
 	BGM.setVolume(10);
 	BGM.setLoop(true);
 	BGM.play();
 
-	font.loadFromFile("LLPIXEL3.ttf");
+	brickTexture.loadFromFile("Resources\\Textures\\mosswallTexture.jpg");
+	brickTexture.setRepeated(true);
+	font.loadFromFile("Resources\\Fonts\\LLPIXEL3.ttf");
 
 	sf::Text menu1Text;
 	menu1Text.setString("VS AI");
@@ -1854,6 +2069,7 @@ int main()
 	settings.antialiasingLevel = 8;
 	RenderWindow window(VideoMode(windowWidth, windowHeight), "FogShooter", Style::Default, settings);
 	window.setFramerateLimit(60);
+	window.setVerticalSyncEnabled(true);
 
 	//window.setActive(false);
 	startScreen(std::ref(window));
