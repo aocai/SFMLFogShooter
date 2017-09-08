@@ -12,7 +12,7 @@ ExpandProjectile::ExpandProjectile(Vector2f p, Vector2f p2, float initialSize, f
 
 	position = p;
 	Vector2f v = p2 - p;
-	velocity = Vector2f(3.0f * (v / magnitude(v)));
+	velocity = Vector2f(5.0f * (v / magnitude(v)));
 	dmg = 20.f;
 	over = false;
 

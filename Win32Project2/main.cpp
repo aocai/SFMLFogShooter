@@ -797,6 +797,7 @@ const unsigned short PORT = 5000;
 const std::string ipAddress = "174.6.144.24";
 sf::TcpSocket tcpsocket;
 bool connected = false;
+bool keepTrying = true;
 
 int counter = 0;
 int counter2 = 0;
@@ -841,12 +842,18 @@ void client(std::string ipAddr)
 	else
 		ip = sf::IpAddress(ipAddr);
 	std::cout << "attemping conenction on ip " << ip.toString() << std::endl;
-	while (tcpsocket.connect(ip, PORT) != sf::Socket::Done)
+
+	auto status = tcpsocket.connect(ip, PORT);
+	while (keepTrying && status != sf::Socket::Done)
 	{
 		std::cout << "Could not connect. Trying again..." << std::endl;
+		tcpsocket.connect(ip, PORT);
 	}
-	std::cout << "connected on ip " << tcpsocket.getRemoteAddress() << std::endl;
-	connected = true;
+	if (status == sf::Socket::Done)
+	{
+		std::cout << "connected on ip " << tcpsocket.getRemoteAddress() << std::endl;
+		connected = true;
+	}
 }
 
 void receivemsg()
@@ -863,7 +870,6 @@ void receivemsg()
 		}
 	}
 }
-
 
 void sendSocketMessage(std::string message)
 {
@@ -948,6 +954,9 @@ void processPacketQueue(Player &p)
 
 void GameOverScreen(RenderWindow &window, std::string str)
 {
+	connected = false;
+	tcpsocket.disconnect();
+
 	sf::Music gameOverBgm;
 	gameOverBgm.openFromFile("Bloom_Nobly.ogg");
 	gameOverBgm.setVolume(10);
@@ -1043,6 +1052,7 @@ void PlayerGameplay(RenderWindow &window)
 	player2.getSprite()->setPosition(player2.getPosition());
 	
 	std::vector<RectangleShape> walls;
+	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
 	bool pause = false;
 
@@ -1064,14 +1074,14 @@ void PlayerGameplay(RenderWindow &window)
 			//window.setActive(false);
 			playerGameplayBgm.stop();
 			GameOverScreen(std::ref(window), "You Lose!");
-			receiveThread->terminate();
+			//receiveThread->terminate();
 			return;
 		}
 		else if (player2.getCurrentHP() <= 0)
 		{
 			playerGameplayBgm.stop();
 			GameOverScreen(std::ref(window), "You Win!");
-			receiveThread->terminate();
+			//receiveThread->terminate();
 			return;
 		}
 
@@ -1143,18 +1153,48 @@ void PlayerGameplay(RenderWindow &window)
 		dmg = player2.calcProjCollision(player.getBounds());
 		player.takeDamage(dmg);
 
+
+		//current mouse coordinates
+		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
+
+		//current player position
+		Vector2f playerPosition = player.getPosition() + Vector2f(16, 20);
+		Vector2f PQ;
+
+		//get vector from player position to mouse position
+		if (playerPosition == mouseCoord)
+			mouseCoord = lastMousePosition;
+		PQ = lastMousePosition - playerPosition;
+
+		//mouse position too close to player position. project mouse position onto surface of circle
+		if (magnitude(PQ) < 50)
+			PQ = (PQ / magnitude(PQ)) * 50.f;
+		lastMousePosition = mouseCoord;
+
+		//get the left and right vectors of the player view area (left and right LOS arms) by rotating vector PQ by 15 degrees
+		Vector2f rightArm = rotateVector2f(PQ, 35) * 100.0f;
+		Vector2f leftArm = rotateVector2f(PQ, -35) * 100.0f;
+
+		//get los ConvexShapes
+		std::vector<ConvexShape> los = clipLOS(playerPosition, lastMousePosition, leftArm, rightArm);
+
+		//check shadow ConvexShapes
+		std::vector<ConvexShape> shadow = checkShadow(walls, playerPosition);
+
 		window.clear(Color::White);
 
 		player.updateProjectile();
 		player2.updateProjectile();
 
+		for (const auto &i : los)
+			window.draw(i);
 		player.draw(window);
 		player.drawProjectile(window);
 		player2.draw(window);
 		player2.drawProjectile(window);
 		window.display();
 	}
-	receiveThread->terminate();
+	//receiveThread->terminate();
 	playerGameplayBgm.stop();
 }
 
@@ -1164,7 +1204,7 @@ void CreateRoom(RenderWindow &window)
 	serverThread->launch();
 
 	auto ip = sf::IpAddress::getLocalAddress().toString();
-
+	
 	sf::Text IPHolder;
 	IPHolder.setString("Your IP Address is " + ip);
 	IPHolder.setColor(Color::Black);
@@ -1231,11 +1271,12 @@ void CreateRoom(RenderWindow &window)
 
 bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 {
+	keepTrying = true;
 	auto clientThread = std::make_unique<sf::Thread>(&client, ipAddr);
 	clientThread->launch();
 
 	sf::Text IPHolder;
-	IPHolder.setString("Connecting to IPAddress");
+	IPHolder.setString("Connecting to IP " + ipAddr);
 	IPHolder.setColor(Color::Black);
 	IPHolder.setFont(font);
 	IPHolder.setOrigin(Vector2f(IPHolder.getGlobalBounds().width / 2.f, IPHolder.getGlobalBounds().height / 2.f));
@@ -1269,7 +1310,8 @@ bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 					if (backText.getGlobalBounds().contains(mousePos))
 					{
-						clientThread->terminate();
+						//clientThread->terminate();
+						keepTrying = false;
 						return false;
 					}
 				}
@@ -1360,9 +1402,10 @@ void JoinRoom(RenderWindow &window)
 			else if (event.type == sf::Event::TextEntered)
 			{
 				//if backspace pressed...
-				if (event.text.unicode == 8 && !ipstring.empty())
+				if (event.text.unicode == 8)
 				{
-					ipstring.pop_back();
+					if (!ipstring.empty())
+						ipstring.pop_back();
 				}
 				//if enter pressed...
 				else if (event.text.unicode == 13)
