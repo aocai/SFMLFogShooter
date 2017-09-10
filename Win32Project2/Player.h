@@ -15,6 +15,7 @@ class Player
 {
 private:
 	RectangleShape player;
+	float speed;
 	int currentAni;
 	Animation* currentAnimation;
 	Animation left;
@@ -63,4 +64,5 @@ public:
 	float getCurrentHP() const;
 	void calcProjCollision(const std::vector<std::unique_ptr<Enemy>> &e);
 	float calcProjCollision(const sf::FloatRect &bounds);
+	float Player::getSpeed() const;
 };

@@ -8,6 +8,7 @@ class SpiralProjectile
 private:
 	std::vector<CircleShape> hitboxes;
 	static const float cooldown;
+	static const float speed;
 public:
 	SpiralProjectile(Vector2f, float);
 	float projDamageCalc(const FloatRect&) override;

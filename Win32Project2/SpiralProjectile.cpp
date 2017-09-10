@@ -1,11 +1,12 @@
 #include "SpiralProjectile.h"
 
 const float SpiralProjectile::cooldown = 10.f;
+const float SpiralProjectile::speed = 5.f;
 
 SpiralProjectile::SpiralProjectile(Vector2f p, float size) : hitboxes(18)
 {
 	position = p;
-	velocity = Vector2f(0, -5);
+	velocity = Vector2f(0, -speed);
 	dmg = 5.f;
 	over = false;
 	for (int i = 0; i < 18; ++i)

@@ -8,6 +8,7 @@ Player::Player(Vector2f size, Vector2f pos)
 	currentAnimation = &down;
 	currentAni = 3;
 	hp = 100;
+	speed = 5.f;
 	hpBar = RectangleShape(Vector2f(size.x, 5));
 	hpBar.setPosition(pos - Vector2f(0, 5));
 	hpBar.setFillColor(Color::Red);
@@ -322,4 +323,9 @@ float Player::calcProjCollision(const sf::FloatRect &bounds)
 		}
 	}
 	return dmg;
+}
+
+float Player::getSpeed() const
+{
+	return speed;
 }

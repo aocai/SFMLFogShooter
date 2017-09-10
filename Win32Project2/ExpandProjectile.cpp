@@ -2,6 +2,7 @@
 #include "utilities.h"
 
 const float ExpandProjectile::cooldown = 5.f;
+const float ExpandProjectile::speed = 10.f;
 
 ExpandProjectile::ExpandProjectile(Vector2f p, Vector2f p2, float initialSize, float expandSize) : initialPosition(p), finalSize(expandSize)
 {
@@ -12,7 +13,7 @@ ExpandProjectile::ExpandProjectile(Vector2f p, Vector2f p2, float initialSize, f
 
 	position = p;
 	Vector2f v = p2 - p;
-	velocity = Vector2f(5.0f * (v / magnitude(v)));
+	velocity = Vector2f(speed * (v / magnitude(v)));
 	dmg = 0.5f;
 	over = false;
 

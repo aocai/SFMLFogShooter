@@ -12,6 +12,7 @@ private:
 	float totalDistance;
 	Vector2f scaling;
 	static const float cooldown;
+	static const float speed;
 public:
 	ExpandProjectile(Vector2f, Vector2f, float, float);
 	float projDamageCalc(const FloatRect&) override;

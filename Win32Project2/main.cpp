@@ -848,6 +848,7 @@ void server()
 				{
 					std::cout << "socket accepted on ip " << tcpsocket.getRemoteAddress().toString() << std::endl;
 					connected = true;
+					break;
 				}
 			}
 		}
@@ -1055,9 +1056,10 @@ void processPlayerPacketQueue(Player &p)
 	}
 }
 
-void GameOverScreen(RenderWindow &window, std::string str)
+//return false to exit to lobby, 1 to restart on same map
+bool GameOverScreen(RenderWindow &window, std::string str)
 {
-	tcpsocket.disconnect();
+	//tcpsocket.disconnect();
 
 	sf::Music gameOverBgm;
 	gameOverBgm.openFromFile("Resources\\Music\\Bloom_Nobly.ogg");
@@ -1070,7 +1072,7 @@ void GameOverScreen(RenderWindow &window, std::string str)
 	gameOverText.setColor(Color::Black);
 	gameOverText.setFont(font);
 	gameOverText.setOrigin(Vector2f(gameOverText.getGlobalBounds().width / 2.f, gameOverText.getGlobalBounds().height / 2.f));
-	gameOverText.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 2.f));
+	gameOverText.setPosition(Vector2f(windowWidth / 2.f, windowHeight / 3.f));
 
 	sf::Text resultText;
 	resultText.setString(str);
@@ -1079,12 +1081,19 @@ void GameOverScreen(RenderWindow &window, std::string str)
 	resultText.setOrigin(Vector2f(resultText.getGlobalBounds().width / 2.f, resultText.getGlobalBounds().height / 2.f));
 	resultText.setPosition(gameOverText.getPosition() + Vector2f(0, 50));
 
+	sf::Text restartText;
+	restartText.setString("Restart");
+	restartText.setColor(Color::Black);
+	restartText.setFont(font);
+	restartText.setOrigin(Vector2f(restartText.getGlobalBounds().width / 2.f, restartText.getGlobalBounds().height / 2.f));
+	restartText.setPosition(resultText.getPosition() + Vector2f(0, 50));
+
 	sf::Text returnText;
 	returnText.setString("Return");
 	returnText.setColor(Color::Black);
 	returnText.setFont(font);
 	returnText.setOrigin(Vector2f(returnText.getGlobalBounds().width / 2.f, returnText.getGlobalBounds().height / 2.f));
-	returnText.setPosition(resultText.getPosition() + Vector2f(0,50));
+	returnText.setPosition(restartText.getPosition() + Vector2f(0,50));
 
 	while (window.isOpen())
 	{
@@ -1100,9 +1109,15 @@ void GameOverScreen(RenderWindow &window, std::string str)
 					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 					if (returnText.getGlobalBounds().contains(mousePos))
 					{
+						tcpsocket.disconnect();
 						std::vector<RectangleShape>().swap(customWalls);
 						gameOverBgm.stop();
-						return;
+						return false;
+					}
+					else if (restartText.getGlobalBounds().contains(mousePos))
+					{
+						gameOverBgm.stop();
+						return true;
 					}
 				}
 			}
@@ -1115,6 +1130,7 @@ void GameOverScreen(RenderWindow &window, std::string str)
 	}
 	std::vector<RectangleShape>().swap(customWalls);
 	gameOverBgm.stop();
+	return false;
 }
 
 void createPlayArea(RenderWindow &window, Player &player1, Player &player2)
@@ -1256,9 +1272,6 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 	playerGameplayBgm.setLoop(true);
 	playerGameplayBgm.play();
 
-	std::thread receiveThread(&receivemsg);
-	receiveThread.detach();
-
 	Texture ayaTexture;
 	Texture cirnoTexture;
 	Texture flandreTexture;
@@ -1318,28 +1331,35 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 		if (player1.getCurrentHP() <= 0)
 		{
 			playerGameplayBgm.stop();
-			GameOverScreen(std::ref(window), "You Lose!");
-			return;
+			auto result = GameOverScreen(std::ref(window), "You Lose!");
+			if (result)
+				continue;
+			else 
+				return;
 		}
 		else if (player2.getCurrentHP() <= 0 || opponentLeft)
 		{
 			playerGameplayBgm.stop();
-			GameOverScreen(std::ref(window), "You Win!");
-			return;
+			auto result = GameOverScreen(std::ref(window), "You Win!");
+			if (result)
+				continue;
+			else
+				return;
 		}
 
 		if (!pause)
 		{
 			Vector2f playerVelocity(0, 0);
+			float speed = player1.getSpeed();
 			//Player Movement
 			if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
-				playerVelocity.x -= 3.f;
+				playerVelocity.x -= speed;
 			if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
-				playerVelocity.x += 3.f;
+				playerVelocity.x += speed;
 			if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
-				playerVelocity.y -= 3.f;
+				playerVelocity.y -= speed;
 			if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
-				playerVelocity.y += 3.f;
+				playerVelocity.y += speed;
 			if (magnitude(playerVelocity) > 0)
 			{
 				player1.move(playerVelocity, customWalls);
@@ -1449,6 +1469,7 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 	}
 	//receiveThread->terminate();
 	playerGameplayBgm.stop();
+	return;
 }
 
 void CreateRoom(RenderWindow &window)
@@ -1521,7 +1542,9 @@ void CreateRoom(RenderWindow &window)
 	serverThread.join();
 	//window.setActive(false);
 	BGM.stop();
+	std::thread receiveThread(&receivemsg);
 	PlayerGameplay(std::ref(window), 0);
+	receiveThread.join();
 	BGM.play();
 }
 
@@ -1614,7 +1637,10 @@ bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 
 	//window.setActive(false);
 	BGM.stop();
+
+	std::thread receiveThread(&receivemsg);
 	PlayerGameplay(std::ref(window), 1);
+	receiveThread.join();
 	BGM.play();
 	return true;
 }
@@ -1908,15 +1934,16 @@ void AIGameplay(RenderWindow &window)
 			}
 
 			Vector2f playerVelocity(0, 0);
+			float speed = player.getSpeed();
 			//Player Movement
 			if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
-				playerVelocity.x -= 3.f;
+				playerVelocity.x -= speed;
 			if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
-				playerVelocity.x += 3.f;
+				playerVelocity.x += speed;
 			if (Keyboard::isKeyPressed(Keyboard::Up) || Keyboard::isKeyPressed(Keyboard::W))
-				playerVelocity.y -= 3.f;
+				playerVelocity.y -= speed;
 			if (Keyboard::isKeyPressed(Keyboard::Down) || Keyboard::isKeyPressed(Keyboard::S))
-				playerVelocity.y += 3.f;
+				playerVelocity.y += speed;
 			if (magnitude(playerVelocity) > 0)
 				player.move(playerVelocity, walls);
 
@@ -2155,4 +2182,7 @@ int main()
 *FIXED* - ISSUE#1: pressing back from "connecting room" with valid IP results in freeze due to client thread not terminated
 *FIXED* (assuming issue was serverThread not ending) - ISSUE#2: game doesnt close properly sometimes
 *FIXED* - ISSUE#3: disconnect server after pressing back on createRoom()
+ISSUE#4: crash on winning
+ISSUE#5: packetQueue need mutex
+ISSUE#6: add retry after game over
 */
