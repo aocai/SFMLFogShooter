@@ -1,6 +1,6 @@
 #include "StraightProjectile.h"
 
-const float StraightProjectile::cooldown = 2.f;
+const float StraightProjectile::cooldown = 0.f;
 
 StraightProjectile::StraightProjectile(Vector2f p, Vector2f p2, Vector2f hitSize)
 {

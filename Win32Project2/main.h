@@ -12,3 +12,4 @@ float windowWidth;
 float windowHeight;
 
 void startScreen(RenderWindow&);
+void fadeScreen(RenderWindow&, float);

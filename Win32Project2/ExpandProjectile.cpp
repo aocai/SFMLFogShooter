@@ -13,7 +13,7 @@ ExpandProjectile::ExpandProjectile(Vector2f p, Vector2f p2, float initialSize, f
 	position = p;
 	Vector2f v = p2 - p;
 	velocity = Vector2f(5.0f * (v / magnitude(v)));
-	dmg = 20.f;
+	dmg = 0.5f;
 	over = false;
 
 	totalDistance = magnitude(p2 - p);

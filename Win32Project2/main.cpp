@@ -5,6 +5,7 @@
 #include <vector>
 #include <stack>
 #include <queue>
+#include <thread>
 #include "main.h"
 
 using namespace sf;
@@ -797,8 +798,10 @@ const unsigned short PORT = 5000;
 const std::string ipAddress = "174.6.144.24";
 sf::TcpSocket tcpsocket;
 bool connected = false;
-bool keepTrying = true;
+bool tryConnect = true;
+bool tryListen = true;
 bool roomReady = false;
+bool opponentLeft = false;
 
 int counter = 0;
 int counter2 = 0;
@@ -825,46 +828,78 @@ public:
 
 void server()
 {
-	std::cout << "server running... IP is " << sf::IpAddress::getLocalAddress().toString() << std::endl;
+	std::cout << "server thread start here" << std::endl;
+	//std::cout << "server running... IP is " << sf::IpAddress::getLocalAddress().toString() << std::endl;
+	std::cout << "server running... IP is " << sf::IpAddress::getPublicAddress().toString() << std::endl;
 	static ReuseableListener listener;
 	std::cout << "accepting socket on port " << PORT << std::endl;
 	listener.close();
 	listener.listen(PORT);
-	if (listener.accept(tcpsocket) == sf::Socket::Done)
+
+	sf::SocketSelector selector;
+	selector.add(listener);
+	while (tryListen)
 	{
-		std::cout << "socket accepted on ip " << tcpsocket.getRemoteAddress().toString() << std::endl;
-		connected = true;
+		if (selector.wait(sf::milliseconds(2000)))
+		{
+			if (selector.isReady(listener))
+			{
+				if (listener.accept(tcpsocket) == sf::Socket::Done)
+				{
+					std::cout << "socket accepted on ip " << tcpsocket.getRemoteAddress().toString() << std::endl;
+					connected = true;
+				}
+			}
+		}
 	}
+	std::cout << "server thread ends here" << std::endl;
 }
 
 void client(std::string ipAddr)
 {
+	std::cout << "client thread start here" << std::endl;
+	if (ipAddr == sf::IpAddress::getPublicAddress().toString())
+	{
+		std::cout << "Attempting connection to own IP not allowed. Client thread end here" << std::endl;
+		return;
+	}
+
 	sf::IpAddress ip;
 	if (ipAddr.empty())
 		ip = sf::IpAddress();
 	else
 		ip = sf::IpAddress(ipAddr);
-	std::cout << "attemping conenction on ip " << ip.toString() << std::endl;
+	std::cout << "Attemping conenction on ip " << ip.toString() << std::endl;
 
-	auto status = tcpsocket.connect(ip, PORT);
-	while (keepTrying && status != sf::Socket::Done)
+	//try connect with incremental timeout upto 2 seconds
+	auto timeout = sf::milliseconds(200);
+	auto status = tcpsocket.connect(ip, PORT, timeout);
+	while (tryConnect && status != sf::Socket::Done)
 	{
-		std::cout << "Could not connect. Trying again..." << std::endl;
-		tcpsocket.connect(ip, PORT);
+		std::cout << "Could not connect. Status code: " << status << ". Trying again with timeout = " << timeout.asMilliseconds() << "..." << std::endl;
+		timeout = sf::milliseconds(std::min(2000, 2 * timeout.asMilliseconds()));
+		tcpsocket.connect(ip, PORT, timeout);
 	}
 	if (status == sf::Socket::Done)
 	{
-		std::cout << "connected on ip " << tcpsocket.getRemoteAddress() << std::endl;
+		std::cout << "Connected on ip " << tcpsocket.getRemoteAddress() << std::endl;
 		connected = true;
 	}
+	std::cout << "Client thread ends here" << std::endl;
 }
 
 void receivemsg()
 {
-	while (connected)
+	std::cout << "receivemsg thread start here" << std::endl;
+	while (true)
 	{
 		sf::Packet packet;
-		tcpsocket.receive(packet);
+		auto status = tcpsocket.receive(packet);
+		if (status == sf::Socket::Disconnected)
+		{
+			connected = false;
+			break;
+		}
 		if (!packet.endOfPacket())
 		{
 			string s;
@@ -872,6 +907,7 @@ void receivemsg()
 			packetQueue.push(s);
 		}
 	}
+	std::cout << "receivemsg thread ends here" << std::endl;
 }
 
 void sendSocketMessage(std::string message)
@@ -901,12 +937,12 @@ void processInitPacketQueue()
 		{
 			std::cout << "received packet ROOM_READY!" << std::endl;
 			i++;
-			string posX;
-			string posY;
-			string sizeX;
-			string sizeY;
 			while (i != s.end())
 			{
+				string posX;
+				string posY;
+				string sizeX;
+				string sizeY;
 				for (; i != s.end() && *i != ','; ++i)
 				{
 					posX += *i;
@@ -1009,9 +1045,10 @@ void processPlayerPacketQueue(Player &p)
 			}
 			p.shootExpand(Vector2f{ static_cast<float>(atof(x.c_str())), static_cast<float>(atof(y.c_str())) });
 		}
-		else if (code == "SOCKET_DISCONNECT")
+		else if (code == "PLAYER_DISCONNECT")
 		{
-			connected = false;
+			std::cout << "received disconnect" << std::endl;
+			opponentLeft = true;
 		}
 		++counter;
 		std::cout << "received " << counter << " packets" << std::endl;
@@ -1020,7 +1057,6 @@ void processPlayerPacketQueue(Player &p)
 
 void GameOverScreen(RenderWindow &window, std::string str)
 {
-	connected = false;
 	tcpsocket.disconnect();
 
 	sf::Music gameOverBgm;
@@ -1081,9 +1117,15 @@ void GameOverScreen(RenderWindow &window, std::string str)
 	gameOverBgm.stop();
 }
 
-void createPlayArea(RenderWindow &window)
+void createPlayArea(RenderWindow &window, Player &player1, Player &player2)
 {
-	bool pause = false;
+	sf::Text hintText;
+	hintText.setString("Click and drag to create walls, and press Enter to confirm!");
+	hintText.setColor(Color::Black);
+	hintText.setFont(font);
+	hintText.setOrigin(Vector2f(hintText.getGlobalBounds().width / 2.f, hintText.getGlobalBounds().height / 2.f));
+	hintText.setPosition(Vector2f(windowWidth / 2.f,  50));
+
 	Vector2f upperLeft;
 	Vector2f bottomRight;
 	
@@ -1094,11 +1136,7 @@ void createPlayArea(RenderWindow &window)
 		{
 			if (event.type == Event::Closed)
 				window.close();
-			if (event.type == Event::LostFocus)
-				pause = true;
-			if (event.type == Event::GainedFocus)
-				pause = false;
-			if (!pause && event.type == sf::Event::MouseButtonPressed)
+			if (event.type == sf::Event::MouseButtonPressed)
 			{
 				if (event.mouseButton.button == sf::Mouse::Left)
 				{
@@ -1118,23 +1156,31 @@ void createPlayArea(RenderWindow &window)
 					}
 				}
 			}
-			if (!pause && event.type == sf::Event::MouseButtonReleased)
+			if (event.type == sf::Event::MouseButtonReleased)
 			{
 				if (event.mouseButton.button == sf::Mouse::Left)
 				{
 					bottomRight.x = event.mouseButton.x;
 					bottomRight.y = event.mouseButton.y;
-					RectangleShape s{ bottomRight - upperLeft };
-					s.setPosition(upperLeft);
-					//s.setFillColor(Color::Black);
-					s.setTexture(&brickTexture);
-					s.setTextureRect({ 0,0,10 * static_cast<int>(s.getSize().x),10 * static_cast<int>(s.getSize().y) });
-					customWalls.emplace_back(s);
+					auto size = bottomRight - upperLeft;
+					if (size.x >= 5 && size.y >= 5)
+					{
+						RectangleShape s{ size };
+						s.setPosition(upperLeft);
+						//s.setFillColor(Color::Black);
+						if (!player1.getBounds().intersects(s.getGlobalBounds()) && !player2.getBounds().intersects(s.getGlobalBounds()))
+						{
+							s.setTexture(&brickTexture);
+							s.setTextureRect({ 0,0,10 * static_cast<int>(s.getSize().x),10 * static_cast<int>(s.getSize().y) });
+							customWalls.emplace_back(s);
+						}
+					}
 				}
 			}
-			if (!pause && event.type == sf::Event::KeyPressed)
+			if (event.type == sf::Event::KeyPressed)
 			{
-				if (event.key.code == sf::Keyboard::Escape)
+				if (event.key.code == sf::Keyboard::Escape ||
+					event.key.code == sf::Keyboard::Return)
 				{
 					std::string s{"ROOM_READY"};
 					for (const auto &i : customWalls)
@@ -1143,16 +1189,25 @@ void createPlayArea(RenderWindow &window)
 						s += ";" + to_string(i.getSize().x) + "," + to_string(i.getSize().y);
 						std::cout << "Rectangle at (" << i.getPosition().x << "," << i.getPosition().y << ") with size (" << i.getSize().x << "," << i.getSize().y << ")" << std::endl;
 					}
+					std::cout << "sent message: " << s << std::endl;
 					sendSocketMessage(s);
 					return;
 				}
 			}
 		}
 
+		player1.updateAnimation();
+		player2.updateAnimation();
+
 		window.clear(Color::White);
 
 		for (const auto &w : customWalls)
 			window.draw(w);
+
+		window.draw(hintText);
+
+		player1.draw(window);
+		player2.draw(window);
 
 		window.display();
 	}
@@ -1201,17 +1256,8 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 	playerGameplayBgm.setLoop(true);
 	playerGameplayBgm.play();
 
-	auto receiveThread = std::make_unique<sf::Thread>(&receivemsg);
-	receiveThread->launch();
-
-	if (playerNumber == 0)
-	{
-		createPlayArea(std::ref(window));
-	}
-	else
-	{
-		waitRoom(std::ref(window));
-	}
+	std::thread receiveThread(&receivemsg);
+	receiveThread.detach();
 
 	Texture ayaTexture;
 	Texture cirnoTexture;
@@ -1226,12 +1272,12 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 	suikaTexture.loadFromFile("Resources\\Sprites\\Suika Ibuki.png");
 	daiyouseiTexture.loadFromFile("Resources\\Sprites\\Daiyousei.png");
 
-	Player player(Vector2f(32, 40), Vector2f((playerNumber == 0) ? 200 : 1000, windowHeight / 2.f));
-	player.setMoveAnimation(flandreTexture, 0.1f);
-	player.setAttackAnimation(flandreTexture, 0.15f);
-	player.setRangeAnimation(flandreTexture, 0.1f);
-	player.setRangeAnimation2(daiyouseiTexture, 0.1f);
-	player.getSprite()->setPosition(player.getPosition());
+	Player player1(Vector2f(32, 40), Vector2f((playerNumber == 0) ? 200 : 1000, windowHeight / 2.f));
+	player1.setMoveAnimation(flandreTexture, 0.1f);
+	player1.setAttackAnimation(flandreTexture, 0.15f);
+	player1.setRangeAnimation(flandreTexture, 0.1f);
+	player1.setRangeAnimation2(daiyouseiTexture, 0.1f);
+	player1.getSprite()->setPosition(player1.getPosition());
 
 	Player player2(Vector2f(32, 40), Vector2f((playerNumber != 0) ? 200 : 1000, windowHeight / 2.f));
 	player2.setMoveAnimation(flandreTexture, 0.1f);
@@ -1240,6 +1286,15 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 	player2.setRangeAnimation2(daiyouseiTexture, 0.1f);
 	player2.getSprite()->setPosition(player2.getPosition());
 	
+	if (playerNumber == 0)
+	{
+		createPlayArea(std::ref(window), player1, player2);
+	}
+	else
+	{
+		waitRoom(std::ref(window));
+	}
+
 	Vector2f lastMousePosition = window.mapPixelToCoords(Mouse::getPosition(window));
 
 	bool pause = false;
@@ -1251,9 +1306,7 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 		{
 			if (event.type == Event::Closed)
 			{
-				connected = false;
 				tcpsocket.disconnect();
-				sendSocketMessage("SOCKET_DISCONNECT");
 				window.close();
 			}
 			if (event.type == Event::LostFocus)
@@ -1262,19 +1315,16 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 				pause = false;
 		}
 		
-		if (player.getCurrentHP() <= 0)
+		if (player1.getCurrentHP() <= 0)
 		{
-			//window.setActive(false);
 			playerGameplayBgm.stop();
 			GameOverScreen(std::ref(window), "You Lose!");
-			//receiveThread->terminate();
 			return;
 		}
-		else if (player2.getCurrentHP() <= 0)
+		else if (player2.getCurrentHP() <= 0 || opponentLeft)
 		{
 			playerGameplayBgm.stop();
 			GameOverScreen(std::ref(window), "You Win!");
-			//receiveThread->terminate();
 			return;
 		}
 
@@ -1292,7 +1342,7 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 				playerVelocity.y += 3.f;
 			if (magnitude(playerVelocity) > 0)
 			{
-				player.move(playerVelocity, customWalls);
+				player1.move(playerVelocity, customWalls);
 				std::string s{ "PLAYER_MOVE" };
 				s += ";" + to_string(playerVelocity.x) + "," + to_string(playerVelocity.y);
 				sendSocketMessage(s);
@@ -1302,7 +1352,7 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 			if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Numpad0))
 			{
 				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
-				auto result = player.rangeAttack(mouseV);
+				auto result = player1.rangeAttack(mouseV);
 				if (result)
 				{
 					std::string s{ "PROJECTILE_NORMAL" };
@@ -1312,7 +1362,7 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 			}
 			if (Keyboard::isKeyPressed(Keyboard::Z))
 			{
-				auto result = player.shootSpiral();
+				auto result = player1.shootSpiral();
 				if (result)
 				{
 					std::string s{ "PROJECTILE_SPIRAL" };
@@ -1322,7 +1372,7 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 			if (Keyboard::isKeyPressed(Keyboard::X))
 			{
 				Vector2f mouseV = window.mapPixelToCoords(Mouse::getPosition(window));
-				auto result = player.shootExpand(mouseV);
+				auto result = player1.shootExpand(mouseV);
 				if (result)
 				{
 					std::string s{ "PROJECTILE_EXPAND" };
@@ -1331,8 +1381,8 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 				}
 			}
 		}
-		player.updateAnimation();
-		player.updatePosition();
+		player1.updateAnimation();
+		player1.updatePosition();
 
 		processPlayerPacketQueue(player2);
 
@@ -1340,18 +1390,18 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 		player2.updatePosition();
 
 		float dmg;
-		dmg = player.calcProjCollision(player2.getBounds());
+		dmg = player1.calcProjCollision(player2.getBounds());
 		player2.takeDamage(dmg);
 
-		dmg = player2.calcProjCollision(player.getBounds());
-		player.takeDamage(dmg);
+		dmg = player2.calcProjCollision(player1.getBounds());
+		player1.takeDamage(dmg);
 
 
 		//current mouse coordinates
 		Vector2f mouseCoord = window.mapPixelToCoords(Mouse::getPosition(window));
 
 		//current player position
-		Vector2f playerPosition = player.getPosition() + Vector2f(16, 20);
+		Vector2f playerPosition = player1.getPosition() + Vector2f(16, 20);
 		Vector2f PQ;
 
 		//get vector from player position to mouse position
@@ -1376,13 +1426,13 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 
 		window.clear(Color::White);
 
-		player.updateProjectile();
+		player1.updateProjectile();
 		player2.updateProjectile();
 
 		player2.draw(window);
 		player2.drawProjectile(window);
 
-		player.drawProjectile(window);
+		player1.drawProjectile(window);
 
 		for (const auto &s : shadow)
 			window.draw(s);
@@ -1393,7 +1443,7 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 		for (const auto &w : customWalls)
 			window.draw(w);
 
-		player.draw(window);
+		player1.draw(window);
 
 		window.display();
 	}
@@ -1403,10 +1453,11 @@ void PlayerGameplay(RenderWindow &window, int playerNumber)
 
 void CreateRoom(RenderWindow &window)
 {
-	auto serverThread = std::make_unique<sf::Thread>(&server);
-	serverThread->launch();
+	tryListen = true;
+	std::thread serverThread(&server);
 
-	auto ip = sf::IpAddress::getLocalAddress().toString();
+	//auto ip = sf::IpAddress::getLocalAddress().toString();
+	auto ip = sf::IpAddress::getPublicAddress().toString();
 	
 	sf::Text IPHolder;
 	IPHolder.setString("Your IP Address is " + ip);
@@ -1443,7 +1494,9 @@ void CreateRoom(RenderWindow &window)
 					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 					if (backText.getGlobalBounds().contains(mousePos))
 					{
-						serverThread->terminate();
+						tryListen = false;
+						fadeScreen(std::ref(window), 1.5);
+						serverThread.join();
 						return;
 					}
 				}
@@ -1465,18 +1518,39 @@ void CreateRoom(RenderWindow &window)
 		window.draw(backText);
 		window.display();
 	}
-	serverThread->wait();
+	serverThread.join();
 	//window.setActive(false);
 	BGM.stop();
 	PlayerGameplay(std::ref(window), 0);
 	BGM.play();
 }
 
+//create fade screen effect with duration in seconds
+void fadeScreen(RenderWindow &window, float seconds)
+{
+	RectangleShape fade(static_cast<Vector2f>(window.getSize()));
+	float a = 0.f;
+	sf::Image i = window.capture();
+	sf::Texture t;
+	t.loadFromImage(i);
+	Sprite s;
+	s.setTexture(t);
+
+	float step = 255.f / (60.f * seconds);
+	while (a < 255)
+	{
+		fade.setFillColor(sf::Color(0, 0, 0, static_cast<int>(a)));
+		a = std::fmin(255.f, a + step);
+		window.draw(s);
+		window.draw(fade);
+		window.display();
+	}
+}
+
 bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 {
-	keepTrying = true;
-	auto clientThread = std::make_unique<sf::Thread>(&client, ipAddr);
-	clientThread->launch();
+	tryConnect = true;
+	std::thread clientThread(&client, ipAddr);
 
 	sf::Text IPHolder;
 	IPHolder.setString("Connecting to IP " + ipAddr);
@@ -1513,8 +1587,9 @@ bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 					auto mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
 					if (backText.getGlobalBounds().contains(mousePos))
 					{
-						//clientThread->terminate();
-						keepTrying = false;
+						tryConnect = false;
+						fadeScreen(std::ref(window), 1.5);
+						clientThread.join();
 						return false;
 					}
 				}
@@ -1536,7 +1611,6 @@ bool ConnectingRoom(RenderWindow &window, std::string ipAddr)
 		window.draw(backText);
 		window.display();
 	}
-	//serverThread->wait();
 
 	//window.setActive(false);
 	BGM.stop();
@@ -2059,7 +2133,6 @@ void startScreen(RenderWindow &window)
 	}
 }
 
-
 int main()
 {
 	windowWidth = 1280.f;
@@ -2076,3 +2149,10 @@ int main()
 
 	return 0;
 }
+
+
+/*
+*FIXED* - ISSUE#1: pressing back from "connecting room" with valid IP results in freeze due to client thread not terminated
+*FIXED* (assuming issue was serverThread not ending) - ISSUE#2: game doesnt close properly sometimes
+*FIXED* - ISSUE#3: disconnect server after pressing back on createRoom()
+*/
