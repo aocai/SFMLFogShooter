@@ -7,8 +7,10 @@ class SpiralProjectile
 {
 private:
 	std::vector<CircleShape> hitboxes;
-	static const float cooldown;
-	static const float speed;
+	long long notValidMask; //bit 0 = valid, bit 1 = not valid
+	static const float default_cooldown;
+	static const float default_speed;
+	static const float default_damage;
 public:
 	SpiralProjectile(Vector2f, float);
 	float projDamageCalc(const FloatRect&) override;
@@ -17,4 +19,7 @@ public:
 	bool updateProjectile() override;
 	void draw(RenderWindow &window) override;
 	static const float getCooldownTime();
+	bool notValid(int i) const;
+	long long getNotValidMask() const;
+	void setNotValidMask(long long);
 };

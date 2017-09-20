@@ -7,15 +7,19 @@ using namespace sf;
 class Projectile
 {
 protected:
+	int projectileID;
+	short projectileTypeID;
 	Vector2f position;
 	Vector2f velocity;
 	Animation animation;
-	float dmg;
 	bool over;
+
+	float damage;
+	static int IDCount;
 public:
 	virtual void setAnimation(const Texture&, float) = 0;
 	virtual void setAnimation(const Animation&, float) = 0;
-	virtual Sprite* getSprite();
+	const Sprite* getSprite() const;
 
 	virtual bool updateProjectile() = 0;
 	virtual void updateAnimation();
@@ -23,10 +27,14 @@ public:
 
 	virtual float projDamageCalc(const FloatRect&) = 0;
 	bool isOver() const;
+	Vector2f getPosition() const;
+	int getID() const;
+	int getTypeID() const;
+	static void incrementIDCount();
 
 	virtual void draw(RenderWindow &window) = 0;
 
-	Projectile() = default;
+	Projectile(Vector2f, Vector2f, float);
 	virtual ~Projectile() = default;
 	Projectile(Projectile&&) = default;
 	Projectile& operator=(Projectile&&) = default;

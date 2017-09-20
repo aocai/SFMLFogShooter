@@ -87,7 +87,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>D:\SFML-2.3.2\include</AdditionalIncludeDirectories>
     </ClCompile>
@@ -163,6 +163,7 @@
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Projectile.cpp" />
+    <ClCompile Include="Server.cpp" />
     <ClCompile Include="SpiralProjectile.cpp" />
     <ClCompile Include="StraightProjectile.cpp" />
     <ClCompile Include="Cirno.cpp" />
@@ -175,6 +176,8 @@
     <ClInclude Include="Aya.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="ExpandProjectile.h" />
+    <ClInclude Include="MyTcpSocket.h" />
+    <ClInclude Include="Server.h" />
     <ClInclude Include="SpiralProjectile.h" />
     <ClInclude Include="StraightProjectile.h" />
     <ClInclude Include="AStar.h" />

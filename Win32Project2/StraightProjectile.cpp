@@ -1,19 +1,17 @@
 #include "StraightProjectile.h"
 
-const float StraightProjectile::cooldown = 0.f;
-const float StraightProjectile::speed = 8.f;
+const float StraightProjectile::default_cooldown = 0.f;
+const float StraightProjectile::default_speed = 8.f;
+const float StraightProjectile::default_damage = 10.f;
 
-StraightProjectile::StraightProjectile(Vector2f p, Vector2f p2, Vector2f hitSize)
+StraightProjectile::StraightProjectile(Vector2f p, Vector2f p2, Vector2f hitSize) : 
+	target(p2), Projectile(p, default_speed*(p2-p)/magnitude(p2-p), default_damage), hitbox(hitSize)
 {
-	hitbox = RectangleShape(hitSize);
-	hitbox.setOrigin(hitSize /2.f);
+	//hitbox = RectangleShape(hitSize);
+	hitbox.setOrigin(hitSize / 2.f);
 	hitbox.setPosition(p);
-	hitbox.setFillColor(Color::Green);
-	position = p;
-	Vector2f v = p2 - p;
-	velocity = Vector2f(speed * (v / magnitude(v)));
-	dmg = 10.f;
-	over = false;
+	//hitbox.setFillColor(Color::Green);
+	projectileTypeID = 0;
 }
 
 float StraightProjectile::projDamageCalc(const FloatRect& bound)
@@ -21,7 +19,7 @@ float StraightProjectile::projDamageCalc(const FloatRect& bound)
 	if (hitbox.getGlobalBounds().intersects(bound))
 	{
 		over = true;
-		return dmg;
+		return damage;
 	}
 	return 0;
 }
@@ -34,9 +32,9 @@ void StraightProjectile::setAnimation(const Texture &t, float speed)
 void StraightProjectile::setAnimation(const Animation &a, float angle)
 {
 	animation = a;
-	animation.getSprite()->setOrigin(Vector2f(16,20));
+	animation.setOrigin(Vector2f(16,20));
 	animation.setPosition(hitbox.getPosition());
-	animation.getSprite()->rotate(angle);
+	animation.rotate(angle);
 	hitbox.rotate(angle);
 }
 
@@ -55,11 +53,15 @@ bool StraightProjectile::updateProjectile()
 
 void StraightProjectile::draw(RenderWindow &window)
 {
-	window.draw(hitbox);
 	window.draw(*animation.getSprite());
 }
 
 const float StraightProjectile::getCooldownTime()
 {
-	return cooldown;
+	return default_cooldown;
+}
+
+Vector2f StraightProjectile::getTarget() const
+{
+	return target;
 }

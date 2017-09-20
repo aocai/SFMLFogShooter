@@ -8,11 +8,13 @@ class ExpandProjectile
 private:
 	CircleShape hitbox;
 	Vector2f initialPosition;
+	Vector2f target;
 	float finalSize;
 	float totalDistance;
 	Vector2f scaling;
-	static const float cooldown;
-	static const float speed;
+	static const float default_cooldown;
+	static const float default_speed;
+	static const float default_damage;
 public:
 	ExpandProjectile(Vector2f, Vector2f, float, float);
 	float projDamageCalc(const FloatRect&) override;
@@ -21,4 +23,5 @@ public:
 	bool updateProjectile() override;
 	void draw(RenderWindow &window) override;
 	static const float getCooldownTime();
+	Vector2f getTarget() const;
 };

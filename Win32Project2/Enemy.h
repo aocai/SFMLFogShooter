@@ -21,15 +21,7 @@ protected:
 	int moveState;
 
 	int currentAni;
-	Animation* currentAnimation;
-	Animation left;
-	Animation right;
-	Animation up;
-	Animation down;
-	Animation leftAttack;
-	Animation rightAttack;
-	Animation upAttack;
-	Animation downAttack;
+	std::vector<Animation> animationVector = std::vector<Animation>(8);
 
 	bool range;
 
@@ -44,7 +36,7 @@ public:
 	virtual void updateEnemy(const std::vector<std::unique_ptr<Enemy>>&);
 	virtual void targetReached();
 
-	Enemy() = default;
+	Enemy(Vector2f);
 	virtual ~Enemy() = default;
 	Enemy(Enemy &&e) = default; //todo deepcopy
 	Enemy& operator=(Enemy&&) = default;
@@ -52,7 +44,7 @@ public:
 	Enemy& operator=(const Enemy&) = default;
 
 	FloatRect getBounds() const;
-	Sprite* getSprite() const;
+	const Sprite* getSprite() const;
 	int getMoveState() const;
 	virtual void updateAnimation(const Player&);
 	void updateSpritePosition();

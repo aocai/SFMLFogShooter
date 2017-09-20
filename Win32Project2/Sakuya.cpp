@@ -1,22 +1,8 @@
 #include "Sakuya.h"
 
-Sakuya::Sakuya(Vector2f p)
+Sakuya::Sakuya(Vector2f p) : Enemy(std::forward<Vector2f>(p))
 {
-	character = RectangleShape(Vector2f(32, 40));
-	character.setPosition(p);
-	velocity = Vector2f(0, 0);
-	counter = 4;
-	moveState = 0;
-
-	currentAnimation = &down;
-	currentAni = 3;
-
 	range = true;
-	hp = 100.f;
-
-	hpBar = RectangleShape(Vector2f(32, 5));
-	hpBar.setPosition(p - Vector2f(0, 5));
-	hpBar.setFillColor(Color::Red);
 }
 
 void Sakuya::shoot(Vector2f p)
@@ -31,18 +17,18 @@ void Sakuya::shoot(Vector2f p)
 
 void Sakuya::setMoveAnimation(const Texture &t, float speed)
 {
-	left = Animation(t, 128, 40, 6, 32, 40, speed);
-	right = Animation(t, 64, 80, 6, 32, 40, speed);
-	up = Animation(t, 0, 0, 6, 32, 40, speed);
-	down = Animation(t, 192, 0, 6, 32, 40, speed);
+	animationVector[0] = Animation(t, 128, 40, 6, 32, 40, speed);
+	animationVector[1] = Animation(t, 64, 80, 6, 32, 40, speed);
+	animationVector[2] = Animation(t, 0, 0, 6, 32, 40, speed);
+	animationVector[3] = Animation(t, 192, 0, 6, 32, 40, speed);
 }
 
 void Sakuya::setAttackAnimation(const Texture &t, float speed)
 {
-	leftAttack = Animation(t, 192, 120, 3, 32, 40, speed);
-	rightAttack = Animation(t, 32, 160, 3, 32, 40, speed);
-	upAttack = Animation(t, 0, 120, 3, 32, 40, speed);
-	downAttack = Animation(t, 96, 120, 3, 32, 40, speed);
+	animationVector[4] = Animation(t, 192, 120, 3, 32, 40, speed);
+	animationVector[5] = Animation(t, 32, 160, 3, 32, 40, speed);
+	animationVector[6] = Animation(t, 0, 120, 3, 32, 40, speed);
+	animationVector[7] = Animation(t, 96, 120, 3, 32, 40, speed);
 }
 
 void Sakuya::setRangeAnimation(const Texture &t, float speed)
@@ -53,8 +39,8 @@ void Sakuya::setRangeAnimation(const Texture &t, float speed)
 
 void Sakuya::updateAnimation(const Player &player)
 {
-	currentAnimation->update();
-	if (currentAni >= 4 && currentAnimation->isOver())
+	animationVector[currentAni].update();
+	if (currentAni >= 4 && animationVector[currentAni].isOver())
 	{
 		shoot(player.getPosition() + player.getSize() / 2.f);
 		setCurrentAnimation(currentAni - 4);

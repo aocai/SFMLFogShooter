@@ -1,13 +1,24 @@
 #include "Enemy.h"
 
+Enemy::Enemy(Vector2f position) : 
+	velocity(0,0), counter(4), moveState(0), currentAni(3), range(false), hp(100.f), character(Vector2f(32,40)), hpBar(Vector2f(32,5))
+{
+	//character = RectangleShape(Vector2f(32, 40));
+	character.setPosition(position);
+
+	//hpBar = RectangleShape(Vector2f(32, 5));
+	hpBar.setPosition(position - Vector2f(0, 5));
+	hpBar.setFillColor(Color::Red);
+}
+
 FloatRect Enemy::getBounds() const
 {
 	return character.getGlobalBounds();
 }
 
-Sprite* Enemy::getSprite() const
+const Sprite* Enemy::getSprite() const
 {
-	return currentAnimation->getSprite();
+	return animationVector[currentAni].getSprite();
 }
 
 void Enemy::targetReached()
@@ -27,8 +38,8 @@ int Enemy::getMoveState() const
 
 void Enemy::updateAnimation(const Player &player)
 {
-	currentAnimation->update();
-	if (currentAni >= 4 && currentAnimation->isOver())
+	animationVector[currentAni].update();
+	if (currentAni >= 4 && animationVector[currentAni].isOver())
 	{
 		if (!range && character.getGlobalBounds().intersects(player.getBounds()))
 		{
@@ -40,7 +51,7 @@ void Enemy::updateAnimation(const Player &player)
 
 void Enemy::updateSpritePosition()
 {
-	currentAnimation->getSprite()->setPosition(character.getPosition());
+	animationVector[currentAni].setPosition(character.getPosition());
 }
 
 void Enemy::shoot(Vector2f v)
@@ -50,53 +61,10 @@ void Enemy::shoot(Vector2f v)
 
 void Enemy::setCurrentAnimation(int i)
 {
-	if (i == 0 && i != currentAni)
+	if (i != currentAni)
 	{
-		currentAnimation->resetFrame();
-		currentAnimation = &left;
-		currentAni = 0;
-	}
-	else if (i == 1 && i != currentAni)
-	{
-		currentAnimation->resetFrame();
-		currentAnimation = &right;
-		currentAni = 1;
-	}
-	else if (i == 2 && i != currentAni)
-	{
-		currentAnimation->resetFrame();
-		currentAnimation = &up;
-		currentAni = 2;
-	}
-	else if (i == 3 && i != currentAni)
-	{
-		currentAnimation->resetFrame();
-		currentAnimation = &down;
-		currentAni = 3;
-	}
-	else if (i == 4 && i != currentAni)
-	{
-		currentAnimation->resetFrame();
-		currentAnimation = &leftAttack;
-		currentAni = 4;
-	}
-	else if (i == 5 && i != currentAni)
-	{
-		currentAnimation->resetFrame();
-		currentAnimation = &rightAttack;
-		currentAni = 5;
-	}
-	else if (i == 6 && i != currentAni)
-	{
-		currentAnimation->resetFrame();
-		currentAnimation = &upAttack;
-		currentAni = 6;
-	}
-	else if (i == 7 && i != currentAni)
-	{
-		currentAnimation->resetFrame();
-		currentAnimation = &downAttack;
-		currentAni = 7;
+		animationVector[currentAni].resetFrame();
+		currentAni = i;
 	}
 }
 
@@ -161,7 +129,7 @@ void Enemy::updateEnemy(const std::vector<std::unique_ptr<Enemy>> &enemyVector)
 	if (moveState == 0)
 	{
 		hpBar.move(velocity);
-		currentAnimation->getSprite()->move(velocity);
+		animationVector[currentAni].move(velocity);
 		++counter;
 	}
 	else
@@ -185,7 +153,6 @@ void Enemy::enemyPathfinder(const std::vector<double> &mapMatrix, Vector2f g, st
 		}
 		while (start != goal)
 		{
-			//path.push(goal);
 			int temp = workVector[goal];
 			if (temp == goal - 1)
 			{
@@ -231,7 +198,6 @@ void Enemy::meleeAttack(Vector2f v)
 {
 	if (currentAni < 4)
 	{
-		//setCurrentAnimation(currentAni + 4);
 		v -= (character.getPosition() + Vector2f(16, 20));
 		if (abs(v.y) > abs(v.x))
 		{
@@ -309,7 +275,7 @@ void Enemy::updateProjectile()
 
 void Enemy::drawEnemy(RenderWindow &window) const
 {
-	window.draw(*currentAnimation->getSprite());
+	window.draw(*animationVector[currentAni].getSprite());
 	window.draw(hpBar);
 }
 

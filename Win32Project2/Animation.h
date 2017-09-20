@@ -11,11 +11,16 @@ private:
 	Sprite sprite;
 	std::vector<IntRect> frames;
 public:
-	Animation();
+	Animation() = default;
 	Animation(const Texture&, int, int, int, int, int, float);
 	void update();
 	void setPosition(Vector2f);
-	Sprite* getSprite();
+	void setOrigin(Vector2f);
+	void scale(Vector2f);
+	void rotate(float);
+	void move(Vector2f);
+
+	const Sprite* getSprite() const;
 	void resetFrame();
 	bool isOver() const;
 };

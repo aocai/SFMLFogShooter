@@ -1,22 +1,21 @@
 #include "SpiralProjectile.h"
 
-const float SpiralProjectile::cooldown = 10.f;
-const float SpiralProjectile::speed = 5.f;
+const float SpiralProjectile::default_cooldown = 10.f;
+const float SpiralProjectile::default_speed = 5.f;
+const float SpiralProjectile::default_damage = 5.f;
 
-SpiralProjectile::SpiralProjectile(Vector2f p, float size) : hitboxes(18)
+SpiralProjectile::SpiralProjectile(Vector2f p, float size) : 
+	hitboxes(18), notValidMask(0), Projectile(p,Vector2f(0,-default_speed), default_damage)
 {
-	position = p;
-	velocity = Vector2f(0, -speed);
-	dmg = 5.f;
-	over = false;
 	for (int i = 0; i < 18; ++i)
 	{
 		hitboxes[i].setRadius(size);
 		hitboxes[i].setOrigin(Vector2f(size, size));
 		hitboxes[i].setPosition(p);
-		hitboxes[i].setFillColor(Color::Green);
+		//hitboxes[i].setFillColor(Color::Green);
 		hitboxes[i].setRotation(i*20.f);
 	}
+	projectileTypeID = 1;
 }
 
 float SpiralProjectile::projDamageCalc(const FloatRect &bound)
@@ -24,18 +23,21 @@ float SpiralProjectile::projDamageCalc(const FloatRect &bound)
 	int count = 0;
 	for (int i = 0; i < hitboxes.size(); ++i)
 	{
+		if (notValid(i))
+			continue;
 		if (hitboxes[i].getGlobalBounds().intersects(bound))
 		{
-			hitboxes.erase(hitboxes.begin() + i);
-			--i;
+			//hitboxes.erase(hitboxes.begin() + i);
+			//--i;
+			notValidMask |= (1 << i);
 			++count;
 		}
 	}
-	if (hitboxes.empty())
+	if (notValidMask == (1 << 18) - 1)
 	{
 		over = true;
 	}
-	return count * dmg;
+	return count * damage;
 }
 
 void SpiralProjectile::setAnimation(const Texture &t, float speed)
@@ -46,24 +48,27 @@ void SpiralProjectile::setAnimation(const Texture &t, float speed)
 void SpiralProjectile::setAnimation(const Animation &a, float angle)
 {
 	animation = a;
-	animation.getSprite()->setOrigin(Vector2f(16,24));
+	animation.setOrigin(Vector2f(16,24));
 }
 
 bool SpiralProjectile::updateProjectile()
 {
 	for (int i = 0; i < hitboxes.size(); ++i)
 	{
+		if (notValid(i))
+			continue;
 		hitboxes[i].move(rotateVector2f(velocity, hitboxes[i].getRotation()));
 		hitboxes[i].setRotation(hitboxes[i].getRotation() + .5f);
 		//check for bounds
 		Vector2f p = hitboxes[i].getPosition();
 		if (p.x < 0 || p.x > 1280 || p.y < 0 || p.y > 720)
 		{
-			hitboxes.erase(hitboxes.begin() + i);
-			--i;
+			//hitboxes.erase(hitboxes.begin() + i);
+			//--i;
+			notValidMask |= (1 << i);
 		}
 	}
-	if (hitboxes.empty())
+	if (notValidMask == (1 << 18) - 1)
 	{
 		over = true;
 		return false;
@@ -73,15 +78,32 @@ bool SpiralProjectile::updateProjectile()
 
 void SpiralProjectile::draw(RenderWindow &window)
 {
-	for (auto &i : hitboxes)
+	for (int i = 0; i < hitboxes.size(); ++i)
 	{
-		animation.setPosition(i.getPosition());
-		window.draw(i); //test
+		if (notValid(i))
+			continue;
+		animation.setPosition(hitboxes[i].getPosition());
 		window.draw(*animation.getSprite());
 	}
 }
 
 const float SpiralProjectile::getCooldownTime()
 {
-	return cooldown;
+	return default_cooldown;
+}
+
+//check if current sub-projectile index is still alive/valid
+bool SpiralProjectile::notValid(int i) const
+{
+	return (1 << i) & notValidMask;
+}
+
+long long SpiralProjectile::getNotValidMask() const
+{
+	return notValidMask;
+}
+
+void SpiralProjectile::setNotValidMask(long long mask)
+{
+	notValidMask = mask;
 }
