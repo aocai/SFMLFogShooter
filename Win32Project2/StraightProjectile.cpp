@@ -1,6 +1,6 @@
 #include "StraightProjectile.h"
 
-const float StraightProjectile::default_cooldown = 0.f;
+const float StraightProjectile::default_cooldown = 0.6f;
 const float StraightProjectile::default_speed = 8.f;
 const float StraightProjectile::default_damage = 10.f;
 

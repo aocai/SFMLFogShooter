@@ -3,7 +3,7 @@
 
 const float ExpandProjectile::default_cooldown = 5.f;
 const float ExpandProjectile::default_speed = 10.f;
-const float ExpandProjectile::default_damage = 0.5f;
+const float ExpandProjectile::default_damage = 0.6f;
 
 ExpandProjectile::ExpandProjectile(Vector2f p, Vector2f p2, float initialSize, float expandSize) :
 	initialPosition(p), target(p2), finalSize(expandSize), Projectile(p, default_speed*(p2 - p) / magnitude(p2 - p), default_damage), totalDistance(magnitude(p2 - p)), scaling(1.05f, 1.05f), hitbox(initialSize)

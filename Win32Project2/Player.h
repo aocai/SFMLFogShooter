@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <memory>
+#include <chrono>
 #include "Projectile.h"
 #include "StraightProjectile.h"
 #include "SpiralProjectile.h"
@@ -21,6 +22,8 @@ struct PlayerFrameInput
 	float targetY;
 };
 
+typedef std::chrono::time_point<std::chrono::system_clock> sysclock;
+
 class Player
 {
 private:
@@ -30,7 +33,7 @@ private:
 	int currentAni;
 	std::vector<Animation> animationVector = std::vector<Animation>(8);
 
-	Vector2f target;
+	//Vector2f target;
 
 	std::vector<std::unique_ptr<Projectile>> playerProjectiles;
 	
@@ -40,8 +43,8 @@ private:
 	mutable float hp;
 	mutable RectangleShape hpBar;
 
-	sf::Clock clock = sf::Clock();
-	std::vector<float> cooldownCounters = std::vector<float>(3,-100.f);
+	//sysclock clockStart = std::chrono::system_clock::now();
+	std::vector<sysclock> cooldownCounter = std::vector<sysclock>(3, sysclock());
 public:
 	Player(Vector2f size, Vector2f pos, int playerNumber = 0);
 	void setMoveAnimation(const Texture &t, float speed);
@@ -55,8 +58,8 @@ public:
 	Vector2f getPosition() const;
 	Vector2f getSize() const;
 	const Sprite* getSprite() const;
-	void shootStraight(Vector2f p);
-	bool rangeAttack(Vector2f v);
+	bool shootStraight(Vector2f p);
+	bool startRangeAttackAnimation(Vector2f v);
 	bool shootSpiral();
 	bool shootExpand(Vector2f);
 	FloatRect getBounds() const;

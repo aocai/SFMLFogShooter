@@ -34,7 +34,8 @@ private:
 	std::queue <std::string> packetQueue;
 	std::vector<sf::RectangleShape> customWalls;
 	std::vector<Player> players;
-	bool isRunning = true;
+	bool serverRunning = true;
+	bool gameRunning = false;
 	bool tryListen = true;
 	bool tryReceiving = true;
 	unsigned short playerCount = 0;

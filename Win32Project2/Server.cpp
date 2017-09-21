@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include "Dispatcher.h"
 
 void Server::connectionListen()
 {
@@ -193,6 +194,7 @@ void Server::processServerPackets()
 			if (roomReadyMask == (1 << playerCount) - 1)
 			{
 				sendSocketMessageToClients("ROOM_READY");
+				gameRunning = true;
 			}
 		}
 	}
@@ -249,7 +251,7 @@ void Server::receiveMessageFromClients()
 
 void Server::stop()
 {
-	isRunning = false;
+	serverRunning = false;
 }
 
 bool Server::allPlayersReady()
@@ -349,7 +351,6 @@ void GamesnapToUdpSnap(GameSnapshot &gamesnap, UdpSnapshot &snap)
 			}
 			else if (proj.projectileType == 1)
 			{
-				std::cout << "server attempting to write mask = " << proj.mask << std::endl;
 				snapshotWriteLongLong(&snap, proj.mask);
 			}
 		}
@@ -362,139 +363,176 @@ void Server::startServer()
 	std::thread receiveThread(&Server::receiveMessageFromClients, this);
 
 	size_t udpPacketSize = 508;
-	char *buffer1 = static_cast<char*>(malloc(udpPacketSize));
+	char *sendBuffer = static_cast<char*>(malloc(udpPacketSize));
 	UdpSnapshot snap;
 	UdpSnapshot receivedSnap;
 	sf::UdpSocket UdpSendSocket;
 	UdpSendSocket.setBlocking(false);
 	UdpSendSocket.bind(sf::Socket::AnyPort);
 
-	char *buffer2 = static_cast<char*>(malloc(udpPacketSize));
+	char *receiveBuffer = static_cast<char*>(malloc(udpPacketSize));
 	sf::UdpSocket UdpReceiveSocket;
 	UdpReceiveSocket.setBlocking(false);
 	UdpReceiveSocket.bind(5001);
 
-	//while in game lobby
-	while (isRunning)
+	while (serverRunning)
 	{
-		processServerPackets();
-		if (playerCount > 0 &&
-			[&]()->bool {
-			for (int i = 0; i < maxPlayerCount; ++i)
+		for (auto &i : playersReadied)
+			i = false;
+		std::vector<Player>().swap(players);
+		std::vector<RectangleShape>().swap(customWalls);
+
+		//while in game lobby
+		while (serverRunning)
+		{
+			processServerPackets();
+			if (playerCount > 0 &&
+				[&]()->bool {
+				for (int i = 0; i < maxPlayerCount; ++i)
+				{
+					if (playersConnected[i] ^ playersReadied[i])
+						return false;
+				}
+				return true;
+			}())
 			{
-				if (playersConnected[i] ^ playersReadied[i])
-					return false;
+				sendSocketMessageToClients("ALL_PLAYERS_READY");
+				std::cout << "All players readied up!" << std::endl;
+				break;
 			}
-			return true;
-		}())
-		{
-			sendSocketMessageToClients("ALL_PLAYERS_READY");
-			std::cout << "All players readied up!" << std::endl;
-			break;
 		}
-	}
 
-	for (const auto &socket : sockets)
-	{
-		players.emplace_back(Vector2f(32, 40), Vector2f(socket->ClientID * 200.f, 720 / 2.f), socket->ClientID);
-	}
+		for (const auto &socket : sockets)
+			players.emplace_back(Vector2f(32, 40), Vector2f(socket->ClientID * 200.f, 720 / 2.f), socket->ClientID);
 
-	sf::Clock clock;
-	sf::Time time;
-	int frameCounter = 0;
+		sf::Clock clock;
+		sf::Time time;
+		int frameCounter = 0;
 
-	while (isRunning)
-	{
-		time = clock.getElapsedTime();
+		Dispatcher dispatcher;
 
-		processServerPackets(); //process administrative packets sent via tcp
-
-		std::size_t received;
-		sf::IpAddress sender;
-		unsigned short port;
-		while (true)
+		bool gameOver = false;
+		while (serverRunning && !gameOver)
 		{
+			time = clock.getElapsedTime();
+
+			processServerPackets(); //process administrative packets sent via tcp
+
 			std::size_t received;
 			sf::IpAddress sender;
 			unsigned short port;
-			UdpReceiveSocket.receive(buffer2, udpPacketSize, received, sender, port);
-
-			if (received <= 0)
-				break;
-
-			//std::cout << "Received " << received << " bytes from " << sender.toString() << " on port " << port << std::endl;
-
-			snapshotInit(&receivedSnap, buffer2, udpPacketSize);
-
-			int playernum = static_cast<int>(snapshotReadChar(&receivedSnap));
-			std::cout << "playernum = " << playernum << std::endl;
-			Vector2f deltaPos{ snapshotReadFloat(&receivedSnap), snapshotReadFloat(&receivedSnap) };
-			std::cout << "deltaPos = (" << deltaPos.x << ", " << deltaPos.y << ")" << std::endl;
-			int skillUsedMask = snapshotReadInt(&receivedSnap);
-			std::cout << "skillUsedMask = " << skillUsedMask << std::endl;
-
-			players[playernum - 1].move(deltaPos, customWalls);
-
-			if (skillUsedMask & 5) //if straight or expand shot
+			while (true)
 			{
-				Vector2f target;
-				target.x = snapshotReadFloat(&receivedSnap);
-				target.y = snapshotReadFloat(&receivedSnap);
-				if (skillUsedMask & 1)
+				std::size_t received;
+				sf::IpAddress sender;
+				unsigned short port;
+				UdpReceiveSocket.receive(receiveBuffer, udpPacketSize, received, sender, port);
+
+				if (received <= 0)
+					break;
+
+				//std::cout << "Received " << received << " bytes from " << sender.toString() << " on port " << port << std::endl;
+
+				snapshotInit(&receivedSnap, receiveBuffer, received);
+
+				int playernum = static_cast<int>(snapshotReadChar(&receivedSnap));
+				std::cout << "playernum = " << playernum << std::endl;
+				Vector2f deltaPos{ snapshotReadFloat(&receivedSnap), snapshotReadFloat(&receivedSnap) };
+				std::cout << "deltaPos = (" << deltaPos.x << ", " << deltaPos.y << ")" << std::endl;
+				int skillUsedMask = snapshotReadInt(&receivedSnap);
+				std::cout << "skillUsedMask = " << skillUsedMask << std::endl;
+
+				players[playernum - 1].move(deltaPos, customWalls);
+
+				if (skillUsedMask & 5) //if straight or expand shot
 				{
-					players[playernum - 1].rangeAttack(target);
-					//Projectile::incrementIDCount();
+					Vector2f target;
+					target.x = snapshotReadFloat(&receivedSnap);
+					target.y = snapshotReadFloat(&receivedSnap);
+					if (skillUsedMask & 1)
+					{
+						//players[playernum - 1].startRangeAttackAnimation(target);
+						dispatcher.accept(std::bind(&Player::shootStraight, &players[playernum - 1], target), 0.6);
+						//Projectile::incrementIDCount();
+					}
+					if (skillUsedMask & 4)
+					{
+						//players[playernum - 1].shootExpand(target);
+						dispatcher.accept(std::bind(&Player::shootExpand, &players[playernum - 1], target), 0);
+						Projectile::incrementIDCount();
+					}
 				}
-				if (skillUsedMask & 4)
+				if (skillUsedMask & 2)
 				{
-					players[playernum - 1].shootExpand(target);
+					//players[playernum - 1].shootSpiral();
+					dispatcher.accept(std::bind(&Player::shootSpiral, &players[playernum - 1]), 0);
 					Projectile::incrementIDCount();
 				}
 			}
-			if (skillUsedMask & 2)
+
+			dispatcher.dispatch();
+
+			//processUserInputPackets(); //process player updates and simulate
+
+			//do projectile collision detection
+			for (int i = 0; i < players.size(); ++i)
 			{
-				players[playernum - 1].shootSpiral();
-				Projectile::incrementIDCount();
+				for (int j = 0; j < players.size(); ++j)
+				{
+					if (i == j)
+						continue;
+					float dmg = players[i].calcProjCollision(players[j].getBounds());
+					players[j].takeDamage(dmg);
+				}
+				players[i].updateProjectile();
 			}
-		}
 
-		//processUserInputPackets(); //process player updates and simulate
-
-		//do projectile collision detection
-		for (int i = 0; i < players.size(); ++i)
-		{
-			for (int j = 0; j < players.size(); ++j)
+			if (frameCounter >= 3)
 			{
-				if (i == j)
-					continue;
-				float dmg = players[i].calcProjCollision(players[j].getBounds());
-				players[j].takeDamage(dmg);
+				snapshotInit(&snap, sendBuffer, udpPacketSize);
+				//send snapshot every 3 simulation frames
+				GameSnapshot gamesnap = constructSnapshot();
+				GamesnapToUdpSnap(gamesnap, snap);
+				for (const auto &socket : sockets)
+				{
+					UdpSendSocket.send(snap.data, snap.currentSize, socket->getRemoteAddress(), 5002);
+					UdpSendSocket.send(snap.data, snap.currentSize, socket->getRemoteAddress(), 5003); //for testing, currently all sockets receive n times data
+				}
+				frameCounter = 0;
 			}
-			players[i].updateProjectile();
-		}
+			++frameCounter;
 
-		if (frameCounter >= 3)
-		{
-			snapshotInit(&snap, buffer1, udpPacketSize);
-			//send snapshot every 3 simulation frames
-			GameSnapshot gamesnap = constructSnapshot();
-			GamesnapToUdpSnap(gamesnap, snap);
-			for (const auto &socket : sockets)
+			//check if game over
+			int winner = 0;
+			if (gameRunning && [&]()->bool {
+				int count = 0;
+				for (const auto &p : players)
+				{
+					if (p.getCurrentHP() > 0)
+					{
+						++count;
+						winner = p.getID();
+					}
+				}
+				return count <= 1;
+			}())
 			{
-				UdpSendSocket.send(snap.data, snap.currentSize, socket->getRemoteAddress(), 5002);
-				UdpSendSocket.send(snap.data, snap.currentSize, socket->getRemoteAddress(), 5003); //for testing, currently all sockets receive n times data
+				sendSocketMessageToClients("GAME_OVER;" + std::to_string(winner));
+				gameOver = true;
+				gameRunning = false;
+				roomReadyMask = 0;
 			}
-			frameCounter = 0;
-		}
-		++frameCounter;
 
-		//sleep to cap at 60 simulations per second
-		std::cout << "sleeping for " << (sf::microseconds(1000000 / 60) - (clock.getElapsedTime() - time)).asMicroseconds() << "microseconds" << std::endl;
-		sleep(sf::microseconds(1000000 / 60) - (clock.getElapsedTime() - time));
+			//sleep to cap at 60 simulations per second
+			std::cout << "sleeping for " << (sf::microseconds(1000000 / 60) - (clock.getElapsedTime() - time)).asMicroseconds() << "microseconds" << std::endl;
+			sleep(sf::microseconds(1000000 / 60) - (clock.getElapsedTime() - time));
+		}
 	}
 
 	tryListen = false;
 	tryReceiving = false;
+	free(sendBuffer);
+	free(receiveBuffer);
 	connectionListenThread.join();
 	receiveThread.join();
 }

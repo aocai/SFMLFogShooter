@@ -58,7 +58,7 @@ void Player::updateAnimation()
 	animationVector[currentAni].update();
 	if (currentAni >= 4 && animationVector[currentAni].isOver())
 	{
-		shootStraight(target);
+		//shootStraight(target);
 		setCurrentAnimation(currentAni - 4);
 	}
 }
@@ -83,9 +83,10 @@ const Sprite* Player::getSprite() const
 	return animationVector[currentAni].getSprite();
 }
 
-void Player::shootStraight(Vector2f p)
+bool Player::shootStraight(Vector2f p)
 {
-	if (clock.getElapsedTime().asSeconds() - cooldownCounters[0] > StraightProjectile::getCooldownTime())
+	std::chrono::duration<float> elapsed = std::chrono::system_clock::now() - cooldownCounter[0];
+	if (elapsed.count() > StraightProjectile::getCooldownTime())
 	{
 		std::unique_ptr<Projectile> cproj = std::make_unique<StraightProjectile>(getPosition() + Vector2f(16, 20), p, Vector2f(14, 40));
 		Vector2f v = p - (getPosition() + Vector2f(16, 20));
@@ -93,15 +94,18 @@ void Player::shootStraight(Vector2f p)
 		float angle = atan2(determinant(v, w), dotProduct(v, w)) * 180.0 / 3.14159265;
 		cproj->setAnimation(rangeAnimation, -angle);
 		playerProjectiles.emplace_back(std::move(cproj));
-		cooldownCounters[0] = clock.getElapsedTime().asSeconds();
+		cooldownCounter[0] = std::chrono::system_clock::now();
+		return true;
 	}
+	return false;
 }
 
-bool Player::rangeAttack(Vector2f v)
+bool Player::startRangeAttackAnimation(Vector2f v)
 {
-	if (clock.getElapsedTime().asSeconds() - cooldownCounters[0] > StraightProjectile::getCooldownTime())
+	std::chrono::duration<float> elapsed = std::chrono::system_clock::now() - cooldownCounter[0];
+	if (elapsed.count() > StraightProjectile::getCooldownTime())
 	{
-		target = v;
+		//target = v;
 		v = v - (getPosition() + Vector2f(16, 20));
 		if (abs(v.y) > abs(v.x))
 		{
@@ -124,12 +128,13 @@ bool Player::rangeAttack(Vector2f v)
 
 bool Player::shootSpiral()
 {
-	if (clock.getElapsedTime().asSeconds() - cooldownCounters[1] > SpiralProjectile::getCooldownTime())
+	std::chrono::duration<float> elapsed = std::chrono::system_clock::now() - cooldownCounter[1];
+	if (elapsed.count() > SpiralProjectile::getCooldownTime())
 	{
 		std::unique_ptr<Projectile> cproj = std::make_unique<SpiralProjectile>(getPosition() + Vector2f(16, 20), 8.f);
 		cproj->setAnimation(rangeAnimation2, 0);
 		playerProjectiles.emplace_back(std::move(cproj));
-		cooldownCounters[1] = clock.getElapsedTime().asSeconds();
+		cooldownCounter[1] = std::chrono::system_clock::now();
 		return true;
 	}
 	return false;
@@ -137,12 +142,13 @@ bool Player::shootSpiral()
 
 bool Player::shootExpand(Vector2f p)
 {
-	if (clock.getElapsedTime().asSeconds() - cooldownCounters[2] > ExpandProjectile::getCooldownTime())
+	std::chrono::duration<float> elapsed = std::chrono::system_clock::now() - cooldownCounter[2];
+	if (elapsed.count() > ExpandProjectile::getCooldownTime())
 	{
 		std::unique_ptr<Projectile> cproj = std::make_unique<ExpandProjectile>(getPosition() + Vector2f(16, 20), p, 5.f, 30.f);
 		cproj->setAnimation(rangeAnimation2, 0);
 		playerProjectiles.emplace_back(std::move(cproj));
-		cooldownCounters[2] = clock.getElapsedTime().asSeconds();
+		cooldownCounter[2] = std::chrono::system_clock::now();
 		return true;
 	}
 	return false;

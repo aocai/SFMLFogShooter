@@ -158,6 +158,7 @@
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="AStar.cpp" />
     <ClCompile Include="Aya.cpp" />
+    <ClCompile Include="Dispatcher.cpp" />
     <ClCompile Include="ExpandProjectile.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Enemy.cpp" />
@@ -174,6 +175,7 @@
   <ItemGroup>
     <ClInclude Include="Animation.h" />
     <ClInclude Include="Aya.h" />
+    <ClInclude Include="Dispatcher.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="ExpandProjectile.h" />
     <ClInclude Include="MyTcpSocket.h" />
