@@ -6,13 +6,12 @@ const float ExpandProjectile::default_speed = 10.f;
 const float ExpandProjectile::default_damage = 0.6f;
 
 ExpandProjectile::ExpandProjectile(Vector2f p, Vector2f p2, float initialSize, float expandSize) :
-	initialPosition(p), target(p2), finalSize(expandSize), Projectile(p, default_speed*(p2 - p) / magnitude(p2 - p), default_damage), totalDistance(magnitude(p2 - p)), scaling(1.05f, 1.05f), hitbox(initialSize)
+	initialPosition(p), target(p2), finalSize(expandSize), Projectile(p, default_speed*(p2 - p) / magnitude(p2 - p), default_damage, 2), totalDistance(magnitude(p2 - p)), scaling(1.05f, 1.05f), hitbox(initialSize)
 {
 	//hitbox = CircleShape(initialSize);
 	hitbox.setOrigin(Vector2f(initialSize, initialSize));
 	hitbox.setPosition(p);
 	//hitbox.setFillColor(Color::Green);
-	projectileTypeID = 2;
 }
 
 float ExpandProjectile::projDamageCalc(const FloatRect &bound)
@@ -71,9 +70,9 @@ bool ExpandProjectile::updateProjectile()
 	return true;
 }
 
-void ExpandProjectile::draw(RenderWindow &window)
+void ExpandProjectile::draw(RenderTarget &target)
 {
-	window.draw(*animation.getSprite());
+	target.draw(*animation.getSprite());
 }
 
 const float ExpandProjectile::getCooldownTime()

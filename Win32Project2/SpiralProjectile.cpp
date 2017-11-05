@@ -5,17 +5,15 @@ const float SpiralProjectile::default_speed = 5.f;
 const float SpiralProjectile::default_damage = 5.f;
 
 SpiralProjectile::SpiralProjectile(Vector2f p, float size) : 
-	hitboxes(18), notValidMask(0), Projectile(p,Vector2f(0,-default_speed), default_damage)
+	hitboxes(18), notValidMask(0), Projectile(p,Vector2f(0,-default_speed), default_damage, 1)
 {
 	for (int i = 0; i < 18; ++i)
 	{
 		hitboxes[i].setRadius(size);
 		hitboxes[i].setOrigin(Vector2f(size, size));
 		hitboxes[i].setPosition(p);
-		//hitboxes[i].setFillColor(Color::Green);
 		hitboxes[i].setRotation(i*20.f);
 	}
-	projectileTypeID = 1;
 }
 
 float SpiralProjectile::projDamageCalc(const FloatRect &bound)
@@ -27,8 +25,6 @@ float SpiralProjectile::projDamageCalc(const FloatRect &bound)
 			continue;
 		if (hitboxes[i].getGlobalBounds().intersects(bound))
 		{
-			//hitboxes.erase(hitboxes.begin() + i);
-			//--i;
 			notValidMask |= (1 << i);
 			++count;
 		}
@@ -57,14 +53,12 @@ bool SpiralProjectile::updateProjectile()
 	{
 		if (notValid(i))
 			continue;
-		hitboxes[i].move(rotateVector2f(velocity, hitboxes[i].getRotation()));
+		hitboxes[i].move(rotateVector2f(velocity, { 0.f, 0.f }, hitboxes[i].getRotation()));
 		hitboxes[i].setRotation(hitboxes[i].getRotation() + .5f);
 		//check for bounds
 		Vector2f p = hitboxes[i].getPosition();
 		if (p.x < 0 || p.x > 1280 || p.y < 0 || p.y > 720)
 		{
-			//hitboxes.erase(hitboxes.begin() + i);
-			//--i;
 			notValidMask |= (1 << i);
 		}
 	}
@@ -76,14 +70,14 @@ bool SpiralProjectile::updateProjectile()
 	return true;
 }
 
-void SpiralProjectile::draw(RenderWindow &window)
+void SpiralProjectile::draw(RenderTarget &target)
 {
 	for (int i = 0; i < hitboxes.size(); ++i)
 	{
 		if (notValid(i))
 			continue;
 		animation.setPosition(hitboxes[i].getPosition());
-		window.draw(*animation.getSprite());
+		target.draw(*animation.getSprite());
 	}
 }
 

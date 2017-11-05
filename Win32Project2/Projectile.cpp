@@ -3,8 +3,8 @@
 
 int Projectile::IDCount = 0;
 
-Projectile::Projectile(Vector2f p, Vector2f v, float dmg) :
-	position(p), velocity(v), over(false), damage(dmg), projectileID(IDCount)
+Projectile::Projectile(Vector2f p, Vector2f v, float dmg, int pType) :
+	position(p), velocity(v), over(false), damage(dmg), projectileTypeID(pType), projectileID(IDCount)
 {
 
 }

@@ -17,7 +17,7 @@ public:
 	void setAnimation(const Texture&, float) override;
 	void setAnimation(const Animation&, float) override;
 	bool updateProjectile() override;
-	void draw(RenderWindow &window) override;
+	void draw(RenderTarget &target) override;
 	static const float getCooldownTime();
 	bool notValid(int i) const;
 	long long getNotValidMask() const;

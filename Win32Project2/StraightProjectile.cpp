@@ -1,17 +1,16 @@
 #include "StraightProjectile.h"
 
-const float StraightProjectile::default_cooldown = 0.6f;
+const float StraightProjectile::default_cooldown = 0.f;
 const float StraightProjectile::default_speed = 8.f;
 const float StraightProjectile::default_damage = 10.f;
 
 StraightProjectile::StraightProjectile(Vector2f p, Vector2f p2, Vector2f hitSize) : 
-	target(p2), Projectile(p, default_speed*(p2-p)/magnitude(p2-p), default_damage), hitbox(hitSize)
+	target(p2), Projectile(p, default_speed*(p2-p)/magnitude(p2-p), default_damage, 0), hitbox(hitSize)
 {
 	//hitbox = RectangleShape(hitSize);
 	hitbox.setOrigin(hitSize / 2.f);
 	hitbox.setPosition(p);
 	//hitbox.setFillColor(Color::Green);
-	projectileTypeID = 0;
 }
 
 float StraightProjectile::projDamageCalc(const FloatRect& bound)
@@ -51,9 +50,9 @@ bool StraightProjectile::updateProjectile()
 	return true;
 }
 
-void StraightProjectile::draw(RenderWindow &window)
+void StraightProjectile::draw(RenderTarget &target)
 {
-	window.draw(*animation.getSprite());
+	target.draw(*animation.getSprite());
 }
 
 const float StraightProjectile::getCooldownTime()

@@ -62,11 +62,13 @@ public:
 	virtual void rangeAttack(Vector2f);
 
 	virtual void updateProjectile();
-	void drawEnemy(RenderWindow&) const;
-	void drawProjectiles(RenderWindow&) const;
+	void drawEnemy(RenderTarget&) const;
+	void drawProjectiles(RenderTarget&) const;
 
 	void calcProjCollision(const Player&);
 
 	void takeDamage(float) const;
 	float getCurrentHP() const;
+
+	const std::vector<std::unique_ptr<Projectile>>& Enemy::getProjectiles() const;
 };

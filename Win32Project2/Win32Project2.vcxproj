@@ -89,13 +89,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\SFML-2.3.2\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SFML-2.4.2\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>ws2_32.lib;sfml-main-d.lib;sfml-graphics-d.lib; sfml-window-d.lib; sfml-system-d.lib; sfml-audio-d.lib; sfml-network-d.lib; kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>D:\SFML-2.3.2\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\SFML-2.4.2\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -176,6 +176,7 @@
     <ClInclude Include="Animation.h" />
     <ClInclude Include="Aya.h" />
     <ClInclude Include="Dispatcher.h" />
+    <ClInclude Include="EffectShader.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="ExpandProjectile.h" />
     <ClInclude Include="MyTcpSocket.h" />
@@ -191,6 +192,17 @@
     <ClInclude Include="Cirno.h" />
     <ClInclude Include="Suika.h" />
     <ClInclude Include="utilities.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="alphaShader.frag" />
+    <None Include="distanceShader.frag" />
+    <None Include="effectShader.frag" />
+    <None Include="GaussianBlur.frag" />
+    <None Include="pulseShader.frag" />
+    <None Include="sampleShader.frag" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="torchShader.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

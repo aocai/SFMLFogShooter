@@ -273,17 +273,17 @@ void Enemy::updateProjectile()
 	}
 }
 
-void Enemy::drawEnemy(RenderWindow &window) const
+void Enemy::drawEnemy(RenderTarget &target) const
 {
-	window.draw(*animationVector[currentAni].getSprite());
-	window.draw(hpBar);
+	target.draw(*animationVector[currentAni].getSprite());
+	target.draw(hpBar);
 }
 
-void Enemy::drawProjectiles(RenderWindow &window) const
+void Enemy::drawProjectiles(RenderTarget &target) const
 {
 	for (const auto &p : enemyProjectile)
 	{
-		p->draw(window);
+		p->draw(target);
 	}
 }
 
@@ -314,4 +314,9 @@ void Enemy::takeDamage(float dmg) const
 float Enemy::getCurrentHP() const
 {
 	return hp;
+}
+
+const std::vector<std::unique_ptr<Projectile>>& Enemy::getProjectiles() const
+{
+	return enemyProjectile;
 }

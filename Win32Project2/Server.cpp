@@ -2,7 +2,6 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include "Dispatcher.h"
 
 void Server::connectionListen()
 {
@@ -51,10 +50,12 @@ void Server::connectionListen()
 			}
 		}
 	}
+	listener.close();
+	selector.clear();
 	std::cout << "connectionListen thread ends here" << std::endl;
 }
 
-void Server::processServerPackets()
+void Server::processTcpPackets()
 {
 	while (!packetQueue.empty())
 	{
@@ -79,7 +80,6 @@ void Server::processServerPackets()
 			else
 			{
 				playersConnected[playerNum - 1] = false;
-				playersReadied[playerNum - 1] = false;
 				for (int i = 0; i < sockets.size(); ++i)
 				{
 					if (sockets[i]->ClientID == playerNum)
@@ -93,6 +93,8 @@ void Server::processServerPackets()
 				sendSocketMessageToClients("PLAYER_DISCONNECTED;" + std::to_string(playerNum));
 				std::cout << "player " << playerNum << " has disconnected!" << std::endl;
 			}
+			for (auto &i : playersReadied)
+				i = false;
 		}
 		else if (code == "PLAYER_READY")
 		{
@@ -252,6 +254,8 @@ void Server::receiveMessageFromClients()
 void Server::stop()
 {
 	serverRunning = false;
+	for (auto &s : sockets)
+		s->disconnect();
 }
 
 bool Server::allPlayersReady()
@@ -304,7 +308,7 @@ PlayerSnapshot Server::constructPlayerSnapshot(const Player &player) const
 	snapshot.posX = player.getPosition().x;
 	snapshot.posY = player.getPosition().y;
 	snapshot.hp = player.getCurrentHP();
-	for (const auto &playerProj : *player.getProjectiles())
+	for (const auto &playerProj : player.getProjectiles())
 	{
 		snapshot.proj.emplace_back(constructProjectileSnapshot(playerProj));
 	}
@@ -317,9 +321,10 @@ GameSnapshot Server::constructSnapshot()
 	GameSnapshot snapshot;
 	snapshot.snapshotID = serverSnapshotID;
 	++serverSnapshotID;
-	for (const auto &p : players)
+	for (int i = 0; i < playersConnected.size(); ++i)
 	{
-		snapshot.p.emplace_back(constructPlayerSnapshot(p));
+		if (playersConnected[i])
+			snapshot.p.emplace_back(constructPlayerSnapshot(players[i]));
 	}
 	return snapshot;
 }
@@ -362,15 +367,15 @@ void Server::startServer()
 	std::thread connectionListenThread(&Server::connectionListen, this);
 	std::thread receiveThread(&Server::receiveMessageFromClients, this);
 
-	size_t udpPacketSize = 508;
-	char *sendBuffer = static_cast<char*>(malloc(udpPacketSize));
+	const size_t udpPacketSize = 508;
+	char sendBuffer[udpPacketSize];
 	UdpSnapshot snap;
 	UdpSnapshot receivedSnap;
 	sf::UdpSocket UdpSendSocket;
 	UdpSendSocket.setBlocking(false);
 	UdpSendSocket.bind(sf::Socket::AnyPort);
 
-	char *receiveBuffer = static_cast<char*>(malloc(udpPacketSize));
+	char receiveBuffer[udpPacketSize];
 	sf::UdpSocket UdpReceiveSocket;
 	UdpReceiveSocket.setBlocking(false);
 	UdpReceiveSocket.bind(5001);
@@ -379,13 +384,18 @@ void Server::startServer()
 	{
 		for (auto &i : playersReadied)
 			i = false;
-		std::vector<Player>().swap(players);
+		std::vector<Player>(4).swap(players);
 		std::vector<RectangleShape>().swap(customWalls);
+
+		sf::Clock clock;
+		sf::Time time;
 
 		//while in game lobby
 		while (serverRunning)
 		{
-			processServerPackets();
+			time = clock.getElapsedTime();
+
+			processTcpPackets();
 			if (playerCount > 0 &&
 				[&]()->bool {
 				for (int i = 0; i < maxPlayerCount; ++i)
@@ -400,15 +410,20 @@ void Server::startServer()
 				std::cout << "All players readied up!" << std::endl;
 				break;
 			}
+
+			std::cout << "sleeping for " << (sf::microseconds(1000000 / 60) - (clock.getElapsedTime() - time)).asMicroseconds() << "microseconds" << std::endl;
+			sleep(sf::microseconds(1000000 / 60) - (clock.getElapsedTime() - time));
 		}
 
+		//create players
 		for (const auto &socket : sockets)
-			players.emplace_back(Vector2f(32, 40), Vector2f(socket->ClientID * 200.f, 720 / 2.f), socket->ClientID);
+		{
+			//players.emplace_back(Vector2f(32, 40), Vector2f(socket->ClientID * 1280 / 6.f, 720 / 2.f), socket->ClientID);
+			//players.back().setMoveAnimation(flandreTexture, 0.1f);
+			players[socket->ClientID - 1] = Player(Vector2f(32, 40), Vector2f(socket->ClientID * 1280 / 6.f, 720 / 2.f), socket->ClientID);
+		}
 
-		sf::Clock clock;
-		sf::Time time;
 		int frameCounter = 0;
-
 		Dispatcher dispatcher;
 
 		bool gameOver = false;
@@ -416,8 +431,10 @@ void Server::startServer()
 		{
 			time = clock.getElapsedTime();
 
-			processServerPackets(); //process administrative packets sent via tcp
+			//process administrative packets sent via tcp
+			processTcpPackets();
 
+			//process udp packets
 			std::size_t received;
 			sf::IpAddress sender;
 			unsigned short port;
@@ -451,28 +468,32 @@ void Server::startServer()
 					target.y = snapshotReadFloat(&receivedSnap);
 					if (skillUsedMask & 1)
 					{
-						//players[playernum - 1].startRangeAttackAnimation(target);
-						dispatcher.accept(std::bind(&Player::shootStraight, &players[playernum - 1], target), 0.6);
-						//Projectile::incrementIDCount();
+						if (players[playernum - 1].isCooledDown(0))
+						{
+							dispatcher.accept(std::bind(&Player::shootStraight, &players[playernum - 1], target), 0.6f);
+							dispatcher.accept(Projectile::incrementIDCount, 0.6f);
+						}
 					}
 					if (skillUsedMask & 4)
 					{
-						//players[playernum - 1].shootExpand(target);
-						dispatcher.accept(std::bind(&Player::shootExpand, &players[playernum - 1], target), 0);
-						Projectile::incrementIDCount();
+						if (players[playernum - 1].isCooledDown(2))
+						{
+							dispatcher.accept(std::bind(&Player::shootExpand, &players[playernum - 1], target), 0);
+							Projectile::incrementIDCount();
+						}
 					}
 				}
 				if (skillUsedMask & 2)
 				{
-					//players[playernum - 1].shootSpiral();
-					dispatcher.accept(std::bind(&Player::shootSpiral, &players[playernum - 1]), 0);
-					Projectile::incrementIDCount();
+					if (players[playernum - 1].isCooledDown(1))
+					{
+						dispatcher.accept(std::bind(&Player::shootSpiral, &players[playernum - 1]), 0);
+						Projectile::incrementIDCount();
+					}
 				}
 			}
 
 			dispatcher.dispatch();
-
-			//processUserInputPackets(); //process player updates and simulate
 
 			//do projectile collision detection
 			for (int i = 0; i < players.size(); ++i)
@@ -487,10 +508,10 @@ void Server::startServer()
 				players[i].updateProjectile();
 			}
 
-			if (frameCounter >= 3)
+			if (frameCounter >= 1)
 			{
 				snapshotInit(&snap, sendBuffer, udpPacketSize);
-				//send snapshot every 3 simulation frames
+				//send snapshot every 2 simulation frames
 				GameSnapshot gamesnap = constructSnapshot();
 				GamesnapToUdpSnap(gamesnap, snap);
 				for (const auto &socket : sockets)
@@ -500,7 +521,8 @@ void Server::startServer()
 				}
 				frameCounter = 0;
 			}
-			++frameCounter;
+			else
+				++frameCounter;
 
 			//check if game over
 			int winner = 0;
@@ -517,10 +539,13 @@ void Server::startServer()
 				return count <= 1;
 			}())
 			{
+				/*
 				sendSocketMessageToClients("GAME_OVER;" + std::to_string(winner));
 				gameOver = true;
 				gameRunning = false;
 				roomReadyMask = 0;
+				*/
+				std::cout << "Server ignores gameover for now" << std::endl;
 			}
 
 			//sleep to cap at 60 simulations per second
@@ -531,8 +556,9 @@ void Server::startServer()
 
 	tryListen = false;
 	tryReceiving = false;
-	free(sendBuffer);
-	free(receiveBuffer);
+	UdpReceiveSocket.unbind();
+	UdpSendSocket.unbind();
 	connectionListenThread.join();
 	receiveThread.join();
+	std::cout << "server ends here" << std::endl;
 }

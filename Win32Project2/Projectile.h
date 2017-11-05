@@ -32,9 +32,9 @@ public:
 	int getTypeID() const;
 	static void incrementIDCount();
 
-	virtual void draw(RenderWindow &window) = 0;
+	virtual void draw(RenderTarget &target) = 0;
 
-	Projectile(Vector2f, Vector2f, float);
+	Projectile(Vector2f, Vector2f, float, int);
 	virtual ~Projectile() = default;
 	Projectile(Projectile&&) = default;
 	Projectile& operator=(Projectile&&) = default;

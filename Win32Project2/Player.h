@@ -33,8 +33,6 @@ private:
 	int currentAni;
 	std::vector<Animation> animationVector = std::vector<Animation>(8);
 
-	//Vector2f target;
-
 	std::vector<std::unique_ptr<Projectile>> playerProjectiles;
 	
 	Animation rangeAnimation;
@@ -58,14 +56,15 @@ public:
 	Vector2f getPosition() const;
 	Vector2f getSize() const;
 	const Sprite* getSprite() const;
+	bool isCooledDown(int) const;
 	bool shootStraight(Vector2f p);
 	bool startRangeAttackAnimation(Vector2f v);
 	bool shootSpiral();
 	bool shootExpand(Vector2f);
 	FloatRect getBounds() const;
-	void draw(RenderWindow &window) const;
+	void draw(RenderTarget &target) const;
 	void updateProjectile();
-	void drawProjectile(RenderWindow &window) const;
+	void drawProjectile(RenderTarget &target) const;
 	void move(Vector2f v, const std::vector<RectangleShape> &walls);
 	void takeDamage(float dmg) const;
 	float getCurrentHP() const;
@@ -73,8 +72,9 @@ public:
 	float calcProjCollision(const sf::FloatRect &bounds);
 	float getSpeed() const;
 	int getID() const;
-	const std::vector<std::unique_ptr<Projectile>>* getProjectiles() const;
+	const std::vector<std::unique_ptr<Projectile>>& getProjectiles() const;
 
+	Player() = default;
 	Player(Player &&e) = default;
 	Player& operator=(Player&&) = default;
 };

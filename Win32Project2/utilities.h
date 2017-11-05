@@ -46,7 +46,7 @@ float magnitude(sf::Vector2f v);
 
 void updateMapMatrix(std::vector<double> &mapMatrix, sf::Vector2f topLeft, sf::Vector2f bottomRight, int value);
 
-sf::Vector2f rotateVector2f(sf::Vector2f v, double angle);
+sf::Vector2f rotateVector2f(sf::Vector2f position, sf::Vector2f origin, double angle);
 
 void snapshotWriteByte(UdpSnapshot *msg, long long value, int size);
 

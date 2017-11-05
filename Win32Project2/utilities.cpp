@@ -27,10 +27,17 @@ void updateMapMatrix(std::vector<double> &mapMatrix, sf::Vector2f topLeft, sf::V
 	}
 }
 
-sf::Vector2f rotateVector2f(sf::Vector2f v, double angle)
+sf::Vector2f rotateVector2f(sf::Vector2f point, sf::Vector2f origin, double angle)
 {
-	angle = angle * 3.141592 / 180;
-	return sf::Vector2f(v.x * std::cos(angle) + v.y * (-std::sin(angle)), v.x * std::sin(angle) + v.y * std::cos(angle));
+	angle = angle * 3.141592 / 180.0;
+	point.x -= origin.x;
+	point.y -= origin.y;
+
+	sf::Vector2f newPoint;
+	newPoint.x = point.x * std::cos(angle) - point.y * std::sin(angle);
+	newPoint.y = point.x * std::sin(angle) + point.y * std::cos(angle);
+
+	return newPoint + origin;
 }
 
 void snapshotWriteByte(UdpSnapshot *msg, long long value, int size)

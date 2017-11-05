@@ -13,10 +13,6 @@ float windowHeight;
 
 void startScreen(RenderWindow&);
 void fadeScreen(RenderWindow&, float);
-//void receiveMessageFromClients();
-//void receiveMessageFromServer();
-//void connectionListen();
-//void server();
 void client(std::string);
 void sendSocketMessageToServer(std::string);
 void sendSocketMessageToClients(std::string);
